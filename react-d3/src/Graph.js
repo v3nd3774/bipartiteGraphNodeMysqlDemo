@@ -4,6 +4,18 @@ import * as bipartite from "d3-bipartite";
 import {create} from 'd3';
 
 class Graph extends Component {
+
+  constructor(props){
+    super(props);
+    this.state = null;
+    // use custom endpoint if props is set and
+    // contains a new query to try
+    // otherwise, use the default route to get data
+    if (props.MYSQL_JOIN_QUERY) {
+      console.log("LOGGING CONSTRUCTOR DETERMINED INTERACTIVE")
+    }
+  }
+
   createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
     const layout = bipartite()
       .width(width)
@@ -145,7 +157,7 @@ class Graph extends Component {
       .attr('x', d => d.x + 15)
       .attr('y', d => d.y + d.height/2)
           .attr('font-family', 'arial')
-          .attr('font-size', 10)
+          .attr('font-size', 12)
           .attr('alignment-baseline', 'middle')
           .attr('text-anchor', 'middle')
           .text(d => d.key);
@@ -154,16 +166,26 @@ class Graph extends Component {
          //.on("mouseout", stopDoingSth)
   }
   async drawChart() {
-    var reactData = await d3.json('http://localhost:5000/', function(error, data) {
-        return data
-    });
+    var reactData;
+    if (this.state) {
+      // If interactive request then state will be populated
+      console.log("Logging an INTERACTIVE request")
+      reactData = await d3.json('http://localhost:5000/environ', function(error, data) {
+          return data
+      });
+    } else {
+      // Otherwise use default request from file
+      reactData = await d3.json('http://localhost:5000/environ', function(error, data) {
+          return data
+      });
+    }
     const svgSize = 2000
     const svg = d3.select("div.container > svg")
       .attr("viewBox", [
         (-svgSize / 30),
         (-svgSize / 30),
-        svgSize,
-        svgSize
+        svgSize/2,
+        svgSize*0.6
       ])
     this.drawReact(this.createLayoutData(reactData, false, svgSize, svgSize), undefined, reactData)
   }
