@@ -1,14 +1,17 @@
 import React, {Component} from 'react';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import { GraphContext } from './GraphContext';
 
 class ViewboxControls extends Component {
 
+  static contextType = GraphContext
+
   constructor(props){
     super(props);
-    this.state = {};
+    this.state = null
     this.handleSubmit = this.handleSubmit.bind(this)
-    this.updateForm = this.updateForm.bind(this)
+    this.updateCanvasForm = this.updateCanvasForm.bind(this)
     this.updateHeight = this.updateHeight.bind(this)
     this.updateWidth = this.updateWidth.bind(this)
     this.updateViewboxOne = this.updateViewboxOne.bind(this)
@@ -18,45 +21,64 @@ class ViewboxControls extends Component {
   }
 
   handleSubmit(event) {
+    const [_, setConfig] = this.context
     event.preventDefault()
     console.log(this.state)
+    setConfig(this.state)
+    console.log(this.props)
   }
 
-  updateForm(event, k) {
-    console.log(event)
+  updateCanvasForm(event, k, parent) {
     var obj = {
-      [`${k}`]: event.target.value
+      [`${k}`]: parseFloat(event.target.value)
     }
-    this.setState(
-      Object.assign(
-        {},
-        this.state,
-        obj
-      )
+    return Object.assign(
+      {},
+      parent,
+      obj
     )
   }
 
   updateHeight(event) {
-    this.updateForm(event, "height")
+    const [config, _] = this.context
+    var newCanvas = this.updateCanvasForm(event, "height", config.canvas)
+    config.canvas = newCanvas
+    this.setState(config)
   }
   updateWidth(event) {
-    this.updateForm(event, "width")
+    const [config, _] = this.context
+    var newCanvas = this.updateCanvasForm(event, "width", config.canvas)
+    config.canvas = newCanvas
+    this.setState(config)
   }
   updateViewboxOne(event) {
-    this.updateForm(event, "viewboxOne")
+    const [config, _] = this.context
+    var newViewBox = this.updateCanvasForm(event, "o", config.canvas.viewBox)
+    config.canvas.viewBox = newViewBox
+    this.setState(config)
   }
   updateViewboxTwo(event) {
-    this.updateForm(event, "viewboxTwo")
+    const [config, _] = this.context
+    var newViewBox = this.updateCanvasForm(event, "tw", config.canvas.viewBox)
+    config.canvas.viewBox = newViewBox
+    this.setState(config)
   }
   updateViewboxThree(event) {
-    this.updateForm(event, "viewboxThree")
+    const [config, _] = this.context
+    var newViewBox = this.updateCanvasForm(event, "th", config.canvas.viewBox)
+    config.canvas.viewBox = newViewBox
+    this.setState(config)
   }
   updateViewboxFour(event) {
-    this.updateForm(event, "viewboxFour")
+    const [config, _] = this.context
+    var newViewBox = this.updateCanvasForm(event, "f", config.canvas.viewBox)
+    config.canvas.viewBox = newViewBox
+    this.setState(config)
   }
 
   componentDidMount() {
-
+    const [config, _] = this.context
+    this.setState(config)
   }
 
   render() {
@@ -68,7 +90,7 @@ class ViewboxControls extends Component {
         <Form.Control
           type="text"
           placeholder="HEIGHT HERE"
-          value={this.state.hasOwnProperty("height") ? this.state.height : ""}
+          value={this.state ? this.state.canvas.height : ""}
           onChange={this.updateHeight}
         />
       </Form.Group>
@@ -78,7 +100,7 @@ class ViewboxControls extends Component {
         <Form.Control
           type="text"
           placeholder="WIDTH HERE"
-          value={this.state.hasOwnProperty("width") ? this.state.width : ""}
+          value={this.state ? this.state.canvas.width : ""}
           onChange={this.updateWidth}
         />
       </Form.Group>
@@ -87,7 +109,7 @@ class ViewboxControls extends Component {
         <Form.Label>SVG Viewbox 1</Form.Label>
         <Form.Control
           type="text"
-          value={this.state.hasOwnProperty("viewboxOne") ? this.state.viewboxOne : ""}
+          value={this.state ? this.state.canvas.viewBox.o : ""}
           onChange={this.updateViewboxOne}
           placeholder="VB1 HERE"
         />
@@ -97,7 +119,7 @@ class ViewboxControls extends Component {
         <Form.Control
           type="text"
           placeholder="VB2 HERE"
-          value={this.state.hasOwnProperty("viewboxTwo") ? this.state.viewboxTwo : ""}
+          value={this.state ? this.state.canvas.viewBox.tw : ""}
           onChange={this.updateViewboxTwo}
         />
       </Form.Group>
@@ -106,7 +128,7 @@ class ViewboxControls extends Component {
         <Form.Control
           type="text"
           placeholder="VB3 HERE"
-          value={this.state.hasOwnProperty("viewboxThree") ? this.state.viewboxThree : ""}
+          value={this.state ? this.state.canvas.viewBox.th : ""}
           onChange={this.updateViewboxThree}
         />
       </Form.Group>
@@ -115,7 +137,7 @@ class ViewboxControls extends Component {
         <Form.Control
           type="text"
           placeholder="VB4 HERE"
-          value={this.state.hasOwnProperty("viewboxFour") ? this.state.viewboxFour : ""}
+          value={this.state ? this.state.canvas.viewBox.f : ""}
           onChange={this.updateViewboxFour}
         />
       </Form.Group>

@@ -1,22 +1,13 @@
-import React, {Component} from 'react';
+import React, {useContext, useEffect} from 'react';
 import * as d3 from "d3";
 import * as bipartite from "d3-bipartite";
-import {create} from 'd3';
+import { GraphContext } from './GraphContext';
 
-class Graph extends Component {
+export default function Graph () {
 
-  constructor(props){
-    super(props);
-    this.state = null;
-    // use custom endpoint if props is set and
-    // contains a new query to try
-    // otherwise, use the default route to get data
-    if (props.MYSQL_JOIN_QUERY) {
-      console.log("LOGGING CONSTRUCTOR DETERMINED INTERACTIVE")
-    }
-  }
+  var [config, _] = useContext(GraphContext)
 
-  createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
+  function createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
     const layout = bipartite()
       .width(width)
       .height(filtered ? height/2 : height)
@@ -26,7 +17,7 @@ class Graph extends Component {
       .value(d => d.value);
     return layout(filteredData);
   }
-  doSth (g, i, els, rawData, svg) {
+  function doSth (g, i, els, rawData, svg) {
      const targets = [...rawData.filter(d => d.target.index === i).map(d => d.source.index), i]
      const sources = [...rawData.filter(d => d.source.index === i).map(d => d.target.index), i]
      var data;
@@ -74,7 +65,7 @@ class Graph extends Component {
           .filter(d => !targets.includes(d.index) && !sources.includes(d.index) )
           .style("opacity", .1)
   }
-  drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
+  function drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
     const color = "green"
     // clear the svg
     const svg = d3.select("svg")
@@ -83,7 +74,7 @@ class Graph extends Component {
     const container = d3.select("svg").append('g')
        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
     const nodeWidth = 1;
-    let { flows, sources, targets } = this.createLayoutData(rawData);
+    let { flows, sources, targets } = createLayoutData(rawData);
     console.log("container");
     console.log(container);
     console.log("layoutData");
@@ -135,16 +126,16 @@ class Graph extends Component {
       .attr('color', 'black')
       .text(d => d.key)
     srclabels
-      .on("mouseover", (i, g, els) => this.doSth(i, g, els, rawData, svg) )
+      .on("mouseover", (i, g, els) => doSth(i, g, els, rawData, svg) )
       .on("click", (g, i, els) => {
-        this.drawReact(layoutData, g.key)
+        drawReact(layoutData, g.key)
       })
     d3.select("svg")
       .on("mouseleave", () => {
         // if there was a filter, remove it
         if (filterKey != undefined)
         {
-          this.drawReact(layoutData)
+          drawReact(layoutData)
           console.log("mouseout")
         }
       })
@@ -162,43 +153,41 @@ class Graph extends Component {
           .attr('text-anchor', 'middle')
           .text(d => d.key);
      tgtlabels
-         .on("mouseover", (i, g, els) => this.doSth(i, g, els, rawData, svg))
+         .on("mouseover", (i, g, els) => doSth(i, g, els, rawData, svg))
          //.on("mouseout", stopDoingSth)
   }
-  async drawChart() {
-    var reactData;
-    if (this.state) {
-      // If interactive request then state will be populated
-      console.log("Logging an INTERACTIVE request")
-      reactData = await d3.json('http://localhost:5000/environ', function(error, data) {
-          return data
-      });
-    } else {
-      // Otherwise use default request from file
-      reactData = await d3.json('http://localhost:5000/environ', function(error, data) {
-          return data
-      });
-    }
-    const svgSize = 2000
-    const svg = d3.select("div.container > svg")
-      .attr("viewBox", [
-        (-svgSize / 30),
-        (-svgSize / 30),
-        svgSize/2,
-        svgSize*0.6
-      ])
-    this.drawReact(this.createLayoutData(reactData, false, svgSize, svgSize), undefined, reactData)
-  }
-  componentDidMount() {
-    this.drawChart()
-  }
-  render() {
-    return (
-    <div className="container">
-      <svg />
-    </div>
-    )
-  }
-}
+  async function drawChart() {
 
-export default Graph;
+    const svg = d3.select("div.container > svg")
+    svg.selectAll("*").remove()
+    svg.attr("viewBox", [
+        config.canvas.viewBox.o,
+        config.canvas.viewBox.tw,
+        config.canvas.viewBox.th,
+        config.canvas.viewBox.f
+      ])
+    var reactData;
+    var api_url = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/${config.data.api.endpoint}`
+    console.log(`Logging an INTERACTIVE request to: ${api_url}`)
+    if(config.data.api.request == "GET") {
+      console.log("GET request...")
+    } else {
+      console.log("POST request...")
+    }
+    reactData = await d3.json(api_url, function(error, data) {
+      return data
+    });
+    drawReact(createLayoutData(reactData, false, config.canvas.height, config.canvas.width), undefined, reactData)
+  }
+
+  useEffect(()=>{
+    console.log(`in use effect: ${JSON.stringify(config)}`)
+    drawChart()
+  }, [config])
+
+  return (
+  <div className="container">
+    <svg />
+  </div>
+  )
+}
