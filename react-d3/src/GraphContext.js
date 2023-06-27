@@ -26,7 +26,8 @@ import {createContext, useState} from 'react';
       protocol: "http",
       host: "localhost",
       port: "5000",
-      endpoint: "environ"
+      endpoint: "environ",
+      getorPost: true
     }
   }
 }

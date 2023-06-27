@@ -1,15 +1,20 @@
 import React, {Component} from 'react';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import { GraphContext } from './GraphContext';
 
 class GraphConfig extends Component {
 
+  static contextType = GraphContext
+
   constructor(props){
     super(props);
-    this.state = {};
+    this.state = null;
     this.handleSubmit = this.handleSubmit.bind(this)
     this.updateForm = this.updateForm.bind(this)
+    this.updateApi = this.updateApi.bind(this)
     this.updateDb = this.updateDb.bind(this)
+    this.updateDbName = this.updateDbName.bind(this)
     this.updateLabelCol = this.updateLabelCol.bind(this)
     this.updateLabelerCol = this.updateLabelerCol.bind(this)
     this.updateLabeleeIdCol = this.updateLabeleeIdCol.bind(this)
@@ -24,76 +29,95 @@ class GraphConfig extends Component {
     this.updateApiGetOrPost = this.updateApiGetOrPost.bind(this)
   }
 
-  updateForm(event, k) {
-    console.log(event)
+  updateForm(event, k, parent) {
     var obj = {
       [`${k}`]: event.target.value
     }
-    this.setState(
-      Object.assign(
-        {},
-        this.state,
-        obj
-      )
+    return Object.assign(
+      {},
+      parent,
+      obj
     )
   }
 
   handleSubmit(event) {
+    const [_, setConfig] = this.context
     event.preventDefault()
     console.log(this.state)
+    setConfig(this.state)
+    console.log(this.props)
   }
 
   componentDidMount() {
+    const [config, _] = this.context
+    this.setState(config)
+  }
+
+  updateApi(event, keyString) {
+    const [config, _] = this.context
+    var newApi = this.updateForm(event, keyString, config.data.api)
+    config.data.api = newApi
+    this.setState(config)
   }
 
   updateApiProtocol(event) {
-    this.updateForm(event, "apiProtocol")
+    this.updateApi(event, "protocol")
   }
   updateApiHost(event) {
-    this.updateForm(event, "apiHost")
+    this.updateApi(event, "host")
   }
   updateApiPort(event) {
-    this.updateForm(event, "apiPort")
+    this.updateApi(event, "port")
   }
   updateApiEndpoint(event) {
-    this.updateForm(event, "apiEndpoint")
+    this.updateApi(event, "endpoint")
   }
   updateApiGetOrPost(event) {
-    this.updateForm(
+    this.updateApi(
       {
         target: {
-          value: !event.target.checked ? "GET" : "POST"
+          value: !event.target.checked ? true : false
         }
       },
-      "apiGetOrPost"
+      "request"
     )
   }
-  updateDb(event) {
-    this.updateForm(event, "db")
+
+  updateDb(event, keyString) {
+    const [config, _] = this.context
+    var newDb = this.updateForm(event, keyString, config.data.db)
+    config.data.db = newDb
+    this.setState(config)
+  }
+
+  updateDbName(event) {
+    this.updateDb(event, "name")
   }
   updateLabelCol(event) {
-    this.updateForm(event, "labelCol")
+    this.updateDb(event, "labelCol")
   }
   updateLabelerCol(event) {
-    this.updateForm(event, "labelerCol")
+    this.updateDb(event, "labelerCol")
   }
   updateLabeleeIdCol(event) {
-    this.updateForm(event, "labeleeIdCol")
+    this.updateDb(event, "labeleeIdCol")
   }
   updateLabeleeContentCol(event) {
-    this.updateForm(event, "labeleeContentCol")
+    this.updateDb(event, "labeleeContentCol")
   }
   updateJoinQuery(event) {
-    this.updateForm(event, "joinQuery")
+    this.updateDb(event, "joinQuery")
   }
   updateTimeCol(event) {
-    this.updateForm(event, "timeCol")
+    this.updateDb(event, "timeCol")
   }
   updateTimeOut(event) {
-    this.updateForm(event, "timeOut")
+    this.updateDb(event, "timeOut")
   }
 
   render() {
+    console.log("IN GRAPHCONF RENDER")
+    console.log(this.state)
     return (
     <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
       <Button variant="primary col-sm-12 mb-3" type="submit">
@@ -105,17 +129,16 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="DATABASE NAME HERE"
-          value={this.state.hasOwnProperty("db") ? this.state.db : ""}
-          onChange={this.updateDb}
-        />
-      </Form.Group>
+          value={this.state ? this.state.data.db.name : ""}
+          onChange={this.updateDbName}
+        /> </Form.Group>
 
       <Form.Group className="col-sm-2" controlId="formLabelCol">
         <Form.Label>Label Column</Form.Label>
         <Form.Control
           type="text"
           placeholder="LABEL COLUMN HERE"
-          value={this.state.hasOwnProperty("labelCol") ? this.state.labelCol : ""}
+          value={this.state ? this.state.data.db.labelCol : ""}
           onChange={this.updateLabelCol}
         />
       </Form.Group>
@@ -125,7 +148,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="LABELER COLUMN HERE"
-          value={this.state.hasOwnProperty("labelerCol") ? this.state.labelerCol : ""}
+          value={this.state ? this.state.data.db.labelerCol : ""}
           onChange={this.updateLabelerCol}
         />
       </Form.Group>
@@ -135,7 +158,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="LABELEE ID COLUMN HERE"
-          value={this.state.hasOwnProperty("labeleeIdCol") ? this.state.labeleeIdCol : ""}
+          value={this.state ? this.state.data.db.labeleeIdCol : ""}
           onChange={this.updateLabeleeIdCol}
         />
       </Form.Group>
@@ -145,7 +168,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="LABELEE CONTENT COLUMN HERE"
-          value={this.state.hasOwnProperty("labeleeContentCol") ? this.state.labeleeContentCol : ""}
+          value={this.state ? this.state.data.db.labeleeContentCol : ""}
           onChange={this.updateLabeleeContentCol}
         />
       </Form.Group>
@@ -155,7 +178,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="JOIN QUERY HERE"
-          value={this.state.hasOwnProperty("joinQuery") ? this.state.joinQuery : ""}
+          value={this.state ? this.state.data.db.joinQuery : ""}
           onChange={this.updateJoinQuery}
         />
       </Form.Group>
@@ -165,7 +188,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="TIME COLUMN HERE"
-          value={this.state.hasOwnProperty("timeCol") ? this.state.timeCol : ""}
+          value={this.state ? this.state.data.db.timeCol : ""}
           onChange={this.updateTimeCol}
         />
       </Form.Group>
@@ -175,15 +198,15 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="TIME OUTPUT FORMAT HERE"
-          value={this.state.hasOwnProperty("timeOut") ? this.state.timeOut : ""}
+          value={this.state ? this.state.data.db.timeOutFormat : ""}
           onChange={this.updateTimeOut}
         />
       </Form.Group>
       <Form.Group className="col-sm-1" controlId="formApiGetOrPost">
-        <Form.Label>API {this.state.hasOwnProperty("apiGetOrPost") ? this.state.apiGetOrPost: "GET"} Request</Form.Label>
+        <Form.Label>API {this.state ? (this.state.data.api.request ? "GET" : "POST") : "GET"} Request</Form.Label>
         <Form.Check
           type="switch"
-          value={this.state.hasOwnProperty("apiGetOrPost") ? this.state.apiGetOrPost : ""}
+          value={this.state ? (this.state.data.api.request ? "GET" : "POST") : ""}
           onChange={this.updateApiGetOrPost}
         />
       </Form.Group>
@@ -192,7 +215,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="API protocol HERE"
-          value={this.state.hasOwnProperty("apiProtocol") ? this.state.apiProtocol : ""}
+          value={this.state ? this.state.data.api.protocol : ""}
           onChange={this.updateApiProtocol}
         />
       </Form.Group>
@@ -201,7 +224,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="API host HERE"
-          value={this.state.hasOwnProperty("apiHost") ? this.state.apiHost : ""}
+          value={this.state ? this.state.data.api.host : ""}
           onChange={this.updateApiHost}
         />
       </Form.Group>
@@ -210,7 +233,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="API port HERE"
-          value={this.state.hasOwnProperty("apiPort") ? this.state.apiPort : ""}
+          value={this.state ? this.state.data.api.port : ""}
           onChange={this.updateApiPort}
         />
       </Form.Group>
@@ -219,7 +242,7 @@ class GraphConfig extends Component {
         <Form.Control
           type="text"
           placeholder="API endpoint HERE"
-          value={this.state.hasOwnProperty("apiEndpoint") ? this.state.apiEndpoint : ""}
+          value={this.state ? this.state.data.api.endpoint : ""}
           onChange={this.updateApiEndpoint}
         />
       </Form.Group>

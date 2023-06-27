@@ -1,4 +1,4 @@
-import {createContext, useState} from 'react';
+import {useState} from 'react';
 import './App.css';
 import Graph from './Graph';
 import GraphConfig from './GraphConfig';
