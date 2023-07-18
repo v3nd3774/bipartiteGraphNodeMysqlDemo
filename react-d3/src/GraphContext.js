@@ -29,6 +29,7 @@ import {createContext, useState} from 'react';
       endpoint: "environ",
       getorPost: true
     }
-  }
+  },
+  response: {}
 }
 export const GraphContext = createContext()

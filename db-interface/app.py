@@ -67,24 +67,54 @@ def serveEnviron():
         r.headers.add("Access-Control-Allow-Origin", "*")
     return r
 
+def checkQuerySafety(x: str) -> bool:
+    normalized = x.lower().strip()
+    unwanted_strings = None
+    with open("./unwanted_strings.txt", "r") as f:
+        unwanted_strings = [s.lower() for s in f.readlines()]
+    assert unwanted_strings, "Unwanted sql strings not loaded properly..."
+    checks = [
+            normalized[0:6] == "select",
+            *[not (uwnt in normalized) for uwnt in unwanted_strings]
+    ]
+    return all(checks)
+
 @app.route("/custom", methods=["POST", "OPTIONS"])
 def serveCustom():
+  r = Response()
+  r.headers.add("Access-Control-Allow-Origin", "*")
+  r.headers.add('Access-Control-Allow-Headers', "*")
+  r.headers.add('Access-Control-Allow-Methods', "*")
   if request.method == "OPTIONS": # preflight
-    r = Response()
-    r.headers.add("Access-Control-Allow-Origin", "*")
-    r.headers.add('Access-Control-Allow-Headers', "*")
-    r.headers.add('Access-Control-Allow-Methods', "*")
     return r
   else: # actual req
     # customRequest leverages environ file as defaults with options passed in
     # overriding other options defined in structure below
     request_struct = copy.deepcopy(config)
     request_struct.update(request.get_json())
+    r.set_data("Error with connecting to sql")
+    r.status_code = 500
+    ####
+    ####
+    ##
+    ## THIS WILL FAIL FOR QUERIES THAT CAUSE MYSQL TO TRY TO USE /TMP as ITS OWNED BY ROOT;
+    ## need to chat with team on how to address this issue
+    ##
+    ####
+    ####
     with engine.connect() as connection:
-        result = connection.execute(text(request_struct["MYSQL_JOIN_QUERY"]))
-        rows = [rowJsonifier(row._asdict()) for row in result]
-        r = Response(response=json.dumps(rows), status=200, mimetype="application/json")
-        r.headers.add("Access-Control-Allow-Origin", "*")
+        query = request_struct["MYSQL_JOIN_QUERY"]
+        qsafe = checkQuerySafety(query)
+        if qsafe:
+            result = connection.execute(text(request_struct["MYSQL_JOIN_QUERY"]))
+            rows = [rowJsonifier(row._asdict()) for row in result]
+            r.set_data(json.dumps(rows))
+            r.status_code = 200
+            r.mimetype = "application/json"
+        else:
+            r.set_data("Only allowed SELECT queries...")
+            print(json.dumps(request_struct))
+            r.status_code = 405
     return r
 
 if __name__ == "__main__":

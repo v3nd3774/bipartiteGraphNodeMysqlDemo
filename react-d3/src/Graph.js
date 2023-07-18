@@ -1,6 +1,7 @@
 import React, {useContext, useEffect} from 'react';
 import * as d3 from "d3";
 import * as bipartite from "d3-bipartite";
+import axios from 'axios';
 import { GraphContext } from './GraphContext';
 
 export default function Graph () {
@@ -171,12 +172,32 @@ export default function Graph () {
     console.log(`Logging an INTERACTIVE request to: ${api_url}`)
     if(config.data.api.request == "GET") {
       console.log("GET request...")
+      reactData = await d3.json(api_url, function(error, data) {
+        return data
+      });
+      console.log("In d3 json GET request...")
+      var out = Object.assign({}, config, {response: reactData})
+      console.log(out)
     } else {
       console.log("POST request...")
+      reactData = await axios.post(
+        api_url,
+        {
+          MYSQL_HOST: config.data.api.host,
+          MYSQL_PORT: config.data.api.port,
+          MYSQL_DB: config.data.db.name,
+          MYSQL_JOIN_QUERY: config.data.db.joinQuery,
+          MYSQL_LABEL_COLUMN: config.data.db.labelCol,
+          MYSQL_LABELER_COLUM: config.data.db.labelerCol ,
+          MYSQL_LABELEE_ID_COLUMN: config.data.db.labeleeIdCol,
+          MYSQL_LABELEE_CONTENT_COLUMN: config.data.db.labeleeContentCol ,
+          MYSQL_TIME_COLUMN: config.data.db.timeCol,
+          MYSQL_OUTPUT_TIME_FORMAT: config.data.db.timeOutFormat
+        })
+      console.log("In axios if stmt")
+      console.log(reactData)
+      reactData = reactData.data
     }
-    reactData = await d3.json(api_url, function(error, data) {
-      return data
-    });
     drawReact(createLayoutData(reactData, false, config.canvas.height, config.canvas.width), undefined, reactData)
   }
 
