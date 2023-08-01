@@ -20,7 +20,6 @@ for ((i=0; i<$COUNT; i++))
 do
   OLD_VAL=${!MAIN_ARRAY[i]:0:1}
   NEW_VAL=${!MAIN_ARRAY[i]:1:1}
-  echo "OLD VALUE ${OLD_VAL}"
-  echo "NEW VALUE ${NEW_VAL}"
-  echo "perl -pi.stage-$i.bak -e 's:$OLD_VAL:$NEW_VAL:g' $UI_CODE_DIR/*.js"
+  echo "OLD_VALUE=${OLD_VAL} /|\ NEW_VALUE=${NEW_VAL}"
+  perl -pi.stage-$i.bak -e 's:$OLD_VAL:$NEW_VAL:g' $UI_CODE_DIR/*.js
 done
