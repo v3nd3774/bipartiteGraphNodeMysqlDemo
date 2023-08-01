@@ -9,5 +9,5 @@ OLD_VAL='"homepage": "/"'
 NEW_VAL='"homepage": "/bipartiteGraphUi"'
 
 echo "OLD_VALUE=${OLD_VAL} /|\ NEW_VALUE=${NEW_VAL}"
-echo "perl -pi.stage-$i.bak -e 's@$OLD_VAL@$NEW_VAL@g' $UI_CODE_DIR/package.json"
-echo perl -pi.stage-$i.bak -e "s@$OLD_VAL@$NEW_VAL@g" $UI_CODE_DIR/package.json
+echo "perl -pi.bak -e 's@$OLD_VAL@$NEW_VAL@g' $UI_CODE_DIR/package.json"
+perl -pi.bak -e "s@$OLD_VAL@$NEW_VAL@g" $UI_CODE_DIR/package.json
