@@ -21,5 +21,5 @@ do
   OLD_VAL=${!MAIN_ARRAY[i]:0:1}
   NEW_VAL=${!MAIN_ARRAY[i]:1:1}
   echo "OLD_VALUE=${OLD_VAL} /|\ NEW_VALUE=${NEW_VAL}"
-  perl -pi.stage-$i.bak -e 's:$OLD_VAL:$NEW_VAL:g' $UI_CODE_DIR/*.js
+  perl -pi.stage-$i.bak -e "s:$OLD_VAL:$NEW_VAL:g" $UI_CODE_DIR/*.js
 done
