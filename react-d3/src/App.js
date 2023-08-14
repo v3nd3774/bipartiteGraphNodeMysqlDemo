@@ -13,6 +13,12 @@ function App() {
     <GraphContext.Provider value={[config, setConfig]}>
       <ViewboxControls/>
       <Graph/>
+      <p>
+        With default settings,
+        <span style={{'background-color': "red", color: 'white'}}> red </span> is NFS;
+        <span style={{'background-color': "purple", color: 'white'}}>purple</span> is UFS,
+        <span style={{'background-color': "green", color: 'white'}}>green</span> is CFS and
+        <span style={{'background-color': "yellow", color: 'white'}}>yellow</span> is skip</p>
       <GraphConfig/>
     </GraphContext.Provider>
   );

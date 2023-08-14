@@ -50,17 +50,19 @@ export default function Graph () {
          return d.source == sources[0].key
        })
        .style("fill", d =>
-             (d.target == -1 || d.target == -2) ? "red" : 
-             d.source ==  1 ? "green" : 
-               "blue"
+             d.target == -1 ? "red" : 
+             d.target == -2 ? "purple" : 
+             d.target ==  1 ? "green" : 
+               "yellow" // zero here
        )
        .style("stroke", d => 
-             (d.target == -1 || d.target == -2) ? "red" : 
-             d.source ==  1 ? "green" : 
-               "blue"
+             d.target == -1 ? "red" : 
+             d.target == -2 ? "purple" : 
+             d.target ==  1 ? "green" : 
+               "yellow" // zero here
        )
        .style("opacity", _ =>
-         0.75
+         0.5
        )
       console.log(data);
   }
@@ -96,14 +98,16 @@ export default function Graph () {
          return d.target == targets[0].key
        })
        .style("fill", d =>
-             (d.target == -1 || d.target == -2) ? "red" : 
-             d.source ==  1 ? "green" : 
-               "blue"
+             d.target == -1 ? "red" : 
+             d.target == -2 ? "purple" : 
+             d.target ==  1 ? "green" : 
+               "yellow" // zero here
        )
        .style("stroke", d => 
-             (d.target == -1 || d.target == -2) ? "red" : 
-             d.source ==  1 ? "green" : 
-               "blue"
+             d.target == -1 ? "red" : 
+             d.target == -2 ? "purple" : 
+             d.target ==  1 ? "green" : 
+               "yellow" // zero here
        )
        .style("opacity", _ =>
          0.75
@@ -111,7 +115,6 @@ export default function Graph () {
       console.log(data);
   }
   function drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
-    const color = "green"
     // clear the svg
     const svg = d3.select("svg")
     console.log(svg);
@@ -132,7 +135,12 @@ export default function Graph () {
       .attr('d', d => d.path)
       .attr('opacity', 0.5)  
       .attr('fill', 'none')  
-      .attr('stroke', d => color)  
+      .attr('stroke', d =>
+             d.target == -1 ? "red" : 
+             d.target == -2 ? "purple" : 
+             d.target ==  1 ? "green" : 
+               "yellow" // zero here
+      )  
           .attr('stroke-width', d => d.thickness);
     // source node rectangles
     container.append('g')
@@ -143,7 +151,12 @@ export default function Graph () {
       .attr('y', d => d.start.y)
       .attr('width', nodeWidth)
       .attr('height', d => d.start.height)
-      .attr('fill', d => color)  
+      .attr('fill', d =>
+             d.target == -1 ? "red" : 
+             d.target == -2 ? "purple" : 
+             d.target ==  1 ? "green" : 
+               "yellow" // zero here
+      )  
       .attr('stroke', 'none');
     // target node rectangles
     container.append('g')
@@ -154,7 +167,12 @@ export default function Graph () {
       .attr('y', d => d.end.y)
       .attr('width', nodeWidth)
       .attr('height', d => d.end.height)
-      .attr('fill', d => color)  
+      .attr('fill', d =>
+             d.target == -1 ? "red" : 
+             d.target == -2 ? "purple" : 
+             d.target ==  1 ? "green" : 
+               "yellow" // zero here
+      )
       .attr('stroke', 'none');
     // source labels
     const srclabels = container.append('g')
