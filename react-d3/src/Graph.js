@@ -22,49 +22,93 @@ export default function Graph () {
      const targets = [...rawData.filter(d => d.target.index === i).map(d => d.source.index), i]
      const sources = [...rawData.filter(d => d.source.index === i).map(d => d.target.index), i]
      var data;
+     console.log("targets");
      console.log(targets);
+     console.log("sources");
      console.log(sources);
+     console.log("g");
      console.log(g);
+     console.log("i");
      console.log(i);
+     console.log("els");
      console.log(els);
+     console.log("svg");
      console.log(svg);
      console.log(d3.select("svg").selectAll("g path"));
      d3.select("svg").selectAll("g path")
        .transition()
-   //    .style("fill", d =>
-   //          d.target == g.key ? "red" : 
-   //          d.source == g.key ? "green" : 
-   //            "white"
-   //    )
+       .style("fill", d =>
+         "white"
+       )
        .style("stroke", d => 
-             //data = d;
-             d.target === g.key ? "red" : 
-             d.source === g.key ? "green" : 
+         "white"
+       )
+       .style("opacity", _ =>
+         0
+       )
+       .filter(d => {
+         return d.source == sources[0].key
+       })
+       .style("fill", d =>
+             (d.target == -1 || d.target == -2) ? "red" : 
+             d.source ==  1 ? "green" : 
                "blue"
        )
-       .style("opacity", d => 
-             //data = d;
-             d.target === g.key ? .9 : 
-             d.source === g.key ? .9 : 
-              .1
+       .style("stroke", d => 
+             (d.target == -1 || d.target == -2) ? "red" : 
+             d.source ==  1 ? "green" : 
+               "blue"
        )
-       .filter(d => d.source != g.key && d.target != g.key )
-       .style("opacity", .1)
+       .style("opacity", _ =>
+         0.75
+       )
       console.log(data);
-      svg.selectAll(".country")
-          .transition()
-          // .attr("fill", d => 
-          //     targets.includes(d.index) ? "red" : 
-          //     sources.includes(d.index) ? "green" : 
-          //       color(d.index)
-          //    )
-          // .attr("stroke", d => 
-          //     targets.includes(d.index) ? "red" : 
-          //     sources.includes(d.index) ? "green" : 
-          //       d3.rgb(color(d.index)).darker()
-          //    )
-          .filter(d => !targets.includes(d.index) && !sources.includes(d.index) )
-          .style("opacity", .1)
+  }
+  function doSthTgt (g, i, els, rawData, svg) {
+     const targets = [...rawData.filter(d => d.target.index === i).map(d => d.source.index), i]
+     const sources = [...rawData.filter(d => d.source.index === i).map(d => d.target.index), i]
+     var data;
+     console.log("targets");
+     console.log(targets);
+     console.log("sources");
+     console.log(sources);
+     console.log("g");
+     console.log(g);
+     console.log("i");
+     console.log(i);
+     console.log("els");
+     console.log(els);
+     console.log("svg");
+     console.log(svg);
+     console.log(d3.select("svg").selectAll("g path"));
+     d3.select("svg").selectAll("g path")
+       .transition()
+       .style("fill", d =>
+         "white"
+       )
+       .style("stroke", d => 
+         "white"
+       )
+       .style("opacity", _ =>
+         0
+       )
+       .filter(d => {
+         return d.target == targets[0].key
+       })
+       .style("fill", d =>
+             (d.target == -1 || d.target == -2) ? "red" : 
+             d.source ==  1 ? "green" : 
+               "blue"
+       )
+       .style("stroke", d => 
+             (d.target == -1 || d.target == -2) ? "red" : 
+             d.source ==  1 ? "green" : 
+               "blue"
+       )
+       .style("opacity", _ =>
+         0.75
+       )
+      console.log(data);
   }
   function drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
     const color = "green"
@@ -127,9 +171,12 @@ export default function Graph () {
       .attr('color', 'black')
       .text(d => d.key)
     srclabels
-      .on("mouseover", (i, g, els) => doSth(i, g, els, rawData, svg) )
+      .on("mouseover", (i, g, els) => 
+        doSth(i, g, els, rawData, svg)
+      )
       .on("click", (g, i, els) => {
-        drawReact(layoutData, g.key)
+        console.log("in click func")
+        drawReact(layoutData, filterKey, rawData, margin)
       })
     d3.select("svg")
       .on("mouseleave", () => {
@@ -146,15 +193,20 @@ export default function Graph () {
       .data(targets)
       .enter().append('text')
     tgtlabels
-      .attr('x', d => d.x + 15)
-      .attr('y', d => d.y + d.height/2)
+      .attr('x', d => d.x - 75)
+      .attr('y', d => d.y)
           .attr('font-family', 'arial')
           .attr('font-size', 12)
           .attr('alignment-baseline', 'middle')
           .attr('text-anchor', 'middle')
-          .text(d => d.key);
+          .attr('color', 'black')
+          .text(d => {
+            console.log("target here")
+            console.log(d)
+            return d.key
+          });
      tgtlabels
-         .on("mouseover", (i, g, els) => doSth(i, g, els, rawData, svg))
+         .on("mouseover", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
          //.on("mouseout", stopDoingSth)
   }
   async function drawChart() {
