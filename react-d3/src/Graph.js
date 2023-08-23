@@ -6,7 +6,7 @@ import { GraphContext } from './GraphContext';
 
 export default function Graph () {
 
-  var [config, _] = useContext(GraphContext)
+  var [config, setConfig] = useContext(GraphContext)
 
   function createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
     const layout = bipartite()
