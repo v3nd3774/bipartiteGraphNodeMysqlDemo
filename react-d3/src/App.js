@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import './App.css';
 import Graph from './Graph';
+import DataTable from './DataTable';
 import GraphConfig from './GraphConfig';
 import ViewboxControls from './ViewboxControls';
 import { defaults, GraphContext } from './GraphContext';
@@ -18,8 +19,11 @@ function App() {
         <span style={{'background-color': "red", color: 'white'}}> red </span> is NFS;
         <span style={{'background-color': "purple", color: 'white'}}>purple</span> is UFS,
         <span style={{'background-color': "green", color: 'white'}}>green</span> is CFS and
-        <span style={{'background-color': "yellow", color: 'white'}}>yellow</span> is skip</p>
+        <span style={{'background-color': "yellow", color: 'white'}}>yellow</span> is skip
+      </p>
+      <DataTable/>
       <GraphConfig/>
+
     </GraphContext.Provider>
   );
 }
