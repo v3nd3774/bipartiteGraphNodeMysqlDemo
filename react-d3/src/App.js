@@ -16,10 +16,10 @@ function App() {
       <Graph/>
       <p>
         With default settings,
-        <span style={{'background-color': "red", color: 'white'}}> red </span> is NFS;
-        <span style={{'background-color': "purple", color: 'white'}}>purple</span> is UFS,
-        <span style={{'background-color': "green", color: 'white'}}>green</span> is CFS and
-        <span style={{'background-color': "yellow", color: 'white'}}>yellow</span> is skip
+        <span style={{backgroundColor: "red", color: 'white'}}> red </span> is NFS;
+        <span style={{backgroundColor: "purple", color: 'white'}}>purple</span> is UFS,
+        <span style={{backgroundColor: "green", color: 'white'}}>green</span> is CFS and
+        <span style={{backgroundColor: "yellow", color: 'white'}}>yellow</span> is skip
       </p>
       <DataTable/>
       <GraphConfig/>

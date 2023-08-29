@@ -43,9 +43,7 @@ class GraphConfig extends Component {
   handleSubmit(event) {
     const [_, setConfig] = this.context
     event.preventDefault()
-    console.log(this.state)
     setConfig(this.state)
-    console.log(this.props)
   }
 
   componentDidMount() {
@@ -116,8 +114,6 @@ class GraphConfig extends Component {
   }
 
   render() {
-    console.log("IN GRAPHCONF RENDER")
-    console.log(this.state)
     return (
     <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
       <Button variant="primary col-sm-12 mb-3" type="submit">

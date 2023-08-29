@@ -1,4 +1,4 @@
-import React, {useContext, useEffect} from 'react';
+import React, {useContext, useEffect, useMemo} from 'react';
 import * as d3 from "d3";
 import * as bipartite from "d3-bipartite";
 import axios from 'axios';
@@ -7,6 +7,17 @@ import { GraphContext } from './GraphContext';
 export default function Graph () {
 
   var [config, setConfig] = useContext(GraphContext)
+
+  function updateConfig(k, v, parent) {
+    var obj = {
+      [`${k}`]: v
+    }
+    return Object.assign(
+      {},
+      parent,
+      obj
+    )
+  }
 
   function createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
     const layout = bipartite()
@@ -22,19 +33,6 @@ export default function Graph () {
      const targets = [...rawData.filter(d => d.target.index === i).map(d => d.source.index), i]
      const sources = [...rawData.filter(d => d.source.index === i).map(d => d.target.index), i]
      var data;
-     console.log("targets");
-     console.log(targets);
-     console.log("sources");
-     console.log(sources);
-     console.log("g");
-     console.log(g);
-     console.log("i");
-     console.log(i);
-     console.log("els");
-     console.log(els);
-     console.log("svg");
-     console.log(svg);
-     console.log(d3.select("svg").selectAll("g path"));
      d3.select("svg").selectAll("g path")
        .transition()
        .style("fill", d =>
@@ -64,25 +62,11 @@ export default function Graph () {
        .style("opacity", _ =>
          0.5
        )
-      console.log(data);
   }
   function doSthTgt (g, i, els, rawData, svg) {
      const targets = [...rawData.filter(d => d.target.index === i).map(d => d.source.index), i]
      const sources = [...rawData.filter(d => d.source.index === i).map(d => d.target.index), i]
      var data;
-     console.log("targets");
-     console.log(targets);
-     console.log("sources");
-     console.log(sources);
-     console.log("g");
-     console.log(g);
-     console.log("i");
-     console.log(i);
-     console.log("els");
-     console.log(els);
-     console.log("svg");
-     console.log(svg);
-     console.log(d3.select("svg").selectAll("g path"));
      d3.select("svg").selectAll("g path")
        .transition()
        .style("fill", d =>
@@ -112,21 +96,15 @@ export default function Graph () {
        .style("opacity", _ =>
          0.75
        )
-      console.log(data);
   }
   function drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
     // clear the svg
     const svg = d3.select("svg")
-    console.log(svg);
     d3.select("svg").selectAll("g").remove();
     const container = d3.select("svg").append('g')
        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
     const nodeWidth = 1;
     let { flows, sources, targets } = createLayoutData(rawData);
-    console.log("container");
-    console.log(container);
-    console.log("layoutData");
-    console.log(layoutData);
     // flow lines
     container.append('g')
       .selectAll('path')
@@ -193,7 +171,6 @@ export default function Graph () {
         doSth(i, g, els, rawData, svg)
       )
       .on("click", (g, i, els) => {
-        console.log("in click func")
         drawReact(layoutData, filterKey, rawData, margin)
       })
     d3.select("svg")
@@ -202,7 +179,6 @@ export default function Graph () {
         if (filterKey != undefined)
         {
           drawReact(layoutData)
-          console.log("mouseout")
         }
       })
     // target labels
@@ -219,14 +195,13 @@ export default function Graph () {
           .attr('text-anchor', 'middle')
           .attr('color', 'black')
           .text(d => {
-            console.log("target here")
-            console.log(d)
             return d.key
           });
      tgtlabels
          .on("mouseover", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
          //.on("mouseout", stopDoingSth)
   }
+
   async function drawChart() {
 
     const svg = d3.select("div.container > svg")
@@ -239,17 +214,12 @@ export default function Graph () {
       ])
     var reactData;
     var api_url = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/${config.data.api.endpoint}`
-    console.log(`Logging an INTERACTIVE request to: ${api_url}`)
     if(config.data.api.request == "GET") {
-      console.log("GET request...")
       reactData = await d3.json(api_url, function(error, data) {
         return data
       });
-      console.log("In d3 json GET request...")
-      var out = Object.assign({}, config, {response: reactData})
-      console.log(out)
+
     } else {
-      console.log("POST request...")
       reactData = await axios.post(
         api_url,
         {
@@ -264,17 +234,22 @@ export default function Graph () {
           MYSQL_TIME_COLUMN: config.data.db.timeCol,
           MYSQL_OUTPUT_TIME_FORMAT: config.data.db.timeOutFormat
         })
-      console.log("In axios if stmt")
-      console.log(reactData)
       reactData = reactData.data
     }
+    setConfig(updateConfig("response", reactData, config))
+    console.log("Storing data")
+    console.log(config)
     drawReact(createLayoutData(reactData, false, config.canvas.height, config.canvas.width), undefined, reactData)
   }
 
   useEffect(()=>{
-    console.log(`in use effect: ${JSON.stringify(config)}`)
     drawChart()
-  }, [config])
+  }, [
+    useMemo(
+      () => (config.response),
+      []
+    )
+  ])
 
   return (
   <div className="container">

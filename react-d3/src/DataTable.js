@@ -23,20 +23,22 @@ const range = len => {
 }
 // end makeData.js
 //
+function randomDate(start, end) {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+}
+//
 const newPerson = () => {
-  const statusChance = Math.random()
+  const labels = [-1, 0, 1, 2]
   return {
-    firstName: namor.generate({ words: 1, numbers: 0 }),
-    lastName: namor.generate({ words: 1, numbers: 0 }),
-    age: Math.floor(Math.random() * 30),
-    visits: Math.floor(Math.random() * 100),
-    progress: Math.floor(Math.random() * 100),
-    status:
-      statusChance > 0.66
-        ? 'relationship'
-        : statusChance > 0.33
-        ? 'complicated'
-        : 'single',
+    source: namor.generate({ words: 1, numbers: 0 }),
+    content: namor.generate(
+      {
+        words: Math.floor(Math.random() * 3) + 1,
+        numbers: 0
+      }
+    ).replace(/-/g, " "),
+    label: labels[Math.floor(Math.random() * labels.length)].toString(),
+    time: randomDate(new Date(2012, 0, 1), new Date()).toString()
   }
 }
 function makeData(...lens) {
@@ -44,13 +46,14 @@ function makeData(...lens) {
     const len = lens[depth]
     return range(len).map(d => {
       return {
-        ...newPerson(),
-        subRows: lens[depth + 1] ? makeDataLevel(depth + 1) : undefined,
+        ...newPerson()
       }
     })
   }
-
-  return makeDataLevel()
+  var out = makeDataLevel()
+  console.log("in make data")
+  console.log(out)
+  return out
 }
 // end makeData.js
 // start App.js
@@ -236,12 +239,24 @@ function fuzzyTextFilterFn(rows, id, filterValue) {
 // Let the table remove the filter if the string is empty
 fuzzyTextFilterFn.autoRemove = (val) => !val;
 
+// https://www.npmjs.com/package/match-sorter#usage
+// ctrl-f WORD_STARTS_WITH
+function similarTextFilterFn(rows, id, filterValue) {
+  return matchSorter(rows, filterValue, {
+    keys: [(row) => row.values[id]],
+    threshold: matchSorter.rankings.WORD_STARTS_WITH
+  });
+}
+// Let the table remove the filter if the string is empty
+similarTextFilterFn.autoRemove = (val) => !val;
+
 // Our table component
 function Table({ columns, data }) {
   const filterTypes = React.useMemo(
     () => ({
       // Add a new fuzzyTextFilterFn filter type.
       fuzzyText: fuzzyTextFilterFn,
+      similarText: similarTextFilterFn,
       // Or, override the default text filter to use
       // "startWith"
       text: (rows, id, filterValue) => {
@@ -364,6 +379,9 @@ function filterGreaterThan(rows, id, filterValue) {
   });
 }
 
+function isEmpty (obj) {
+  return Object.keys(obj).length === 0
+}
 
 // This is an autoRemove method on the filter function that
 // when given the new filter value and returns true, the filter
@@ -372,52 +390,33 @@ function filterGreaterThan(rows, id, filterValue) {
 filterGreaterThan.autoRemove = (val) => typeof val !== "number";
 // end App.js
 export default function DataTable () {
-  var [config, setConfig] = useContext(GraphContext)
+  var [config, _] = useContext(GraphContext)
   return (
     <Table columns={
       React.useMemo(
         () => [
           {
-            Header: "Name",
-            columns: [
-              {
-                Header: "First Name",
-                accessor: "firstName"
-              },
-              {
-                Header: "Last Name",
-                accessor: "lastName",
-                // Use our custom `fuzzyText` filter on this column
-                filter: "fuzzyText"
-              }
-            ]
-          },
-          {
             Header: "Info",
             columns: [
               {
-                Header: "Age",
-                accessor: "age",
-                Filter: SliderColumnFilter,
-                filter: "equals"
+                Header: "Labeler",
+                accessor: "source",
+                filter: "fuzzyText"
               },
               {
-                Header: "Visits",
-                accessor: "visits",
-                Filter: NumberRangeColumnFilter,
-                filter: "between"
+                Header: "Statement",
+                accessor: "content",
+                filter: "similarText"
               },
               {
-                Header: "Status",
-                accessor: "status",
-                Filter: SelectColumnFilter,
-                filter: "includes"
+                Header: "Label",
+                accessor: "label",
+                Filter: SelectColumnFilter
               },
               {
-                Header: "Profile Progress",
-                accessor: "progress",
-                Filter: SliderColumnFilter,
-                filter: filterGreaterThan
+                Header: "Time",
+                accessor: "time",
+                filter: "similarText"
               }
             ]
           }
@@ -426,6 +425,12 @@ export default function DataTable () {
       )
 
   }
-  data={React.useMemo(() => makeData(100000), [])} />
+  data={
+    //React.useMemo(
+    //  //() => isEmpty(config.response) ? config.response : makeData(100), []
+    //  () => false ? config.response : makeData(100), []
+    //)
+    ! isEmpty(config.response) ? config.response : makeData(100)
+  } />
   );
 }
