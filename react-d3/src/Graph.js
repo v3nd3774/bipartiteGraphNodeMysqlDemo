@@ -22,7 +22,7 @@ export default function Graph () {
   function createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
     const layout = bipartite()
       .width(width)
-      .height(filtered ? height/2 : height)
+      .height(height)
       .padding(padding)
       .source(d => d.source)
       .target(d => d.target)
@@ -48,15 +48,15 @@ export default function Graph () {
          return d.source == sources[0].key
        })
        .style("fill", d =>
-             d.target == -1 ? "red" : 
-             d.target == -2 ? "purple" : 
-             d.target ==  1 ? "green" : 
+             d.original.label == -1 ? "red" : 
+             d.original.label == -2 ? "purple" : 
+             d.original.label ==  1 ? "green" : 
                "yellow" // zero here
        )
        .style("stroke", d => 
-             d.target == -1 ? "red" : 
-             d.target == -2 ? "purple" : 
-             d.target ==  1 ? "green" : 
+             d.original.label == -1 ? "red" : 
+             d.original.label == -2 ? "purple" : 
+             d.original.label ==  1 ? "green" : 
                "yellow" // zero here
        )
        .style("opacity", _ =>
@@ -82,15 +82,15 @@ export default function Graph () {
          return d.target == targets[0].key
        })
        .style("fill", d =>
-             d.target == -1 ? "red" : 
-             d.target == -2 ? "purple" : 
-             d.target ==  1 ? "green" : 
+             d.original.label == -1 ? "red" : 
+             d.original.label == -2 ? "purple" : 
+             d.original.label ==  1 ? "green" : 
                "yellow" // zero here
        )
        .style("stroke", d => 
-             d.target == -1 ? "red" : 
-             d.target == -2 ? "purple" : 
-             d.target ==  1 ? "green" : 
+             d.original.label == -1 ? "red" : 
+             d.original.label == -2 ? "purple" : 
+             d.original.label ==  1 ? "green" : 
                "yellow" // zero here
        )
        .style("opacity", _ =>
@@ -114,9 +114,9 @@ export default function Graph () {
       .attr('opacity', 0.5)  
       .attr('fill', 'none')  
       .attr('stroke', d =>
-             d.target == -1 ? "red" : 
-             d.target == -2 ? "purple" : 
-             d.target ==  1 ? "green" : 
+             d.original.label == -1 ? "red" : 
+             d.original.label == -2 ? "purple" : 
+             d.original.label ==  1 ? "green" : 
                "yellow" // zero here
       )  
           .attr('stroke-width', d => d.thickness);
@@ -130,9 +130,9 @@ export default function Graph () {
       .attr('width', nodeWidth)
       .attr('height', d => d.start.height)
       .attr('fill', d =>
-             d.target == -1 ? "red" : 
-             d.target == -2 ? "purple" : 
-             d.target ==  1 ? "green" : 
+             d.original.label == -1 ? "red" : 
+             d.original.label == -2 ? "purple" : 
+             d.original.label ==  1 ? "green" : 
                "yellow" // zero here
       )  
       .attr('stroke', 'none');
@@ -146,9 +146,9 @@ export default function Graph () {
       .attr('width', nodeWidth)
       .attr('height', d => d.end.height)
       .attr('fill', d =>
-             d.target == -1 ? "red" : 
-             d.target == -2 ? "purple" : 
-             d.target ==  1 ? "green" : 
+             d.original.label == -1 ? "red" : 
+             d.original.label == -2 ? "purple" : 
+             d.original.label ==  1 ? "green" : 
                "yellow" // zero here
       )
       .attr('stroke', 'none');
@@ -187,7 +187,7 @@ export default function Graph () {
       .data(targets)
       .enter().append('text')
     tgtlabels
-      .attr('x', d => d.x - 75)
+      .attr('x', d => d.x)
       .attr('y', d => d.y)
           .attr('font-family', 'arial')
           .attr('font-size', 12)
@@ -212,6 +212,8 @@ export default function Graph () {
         config.canvas.viewBox.th,
         config.canvas.viewBox.f
       ])
+    svg.attr("width", config.canvas.width)
+    svg.attr("height", config.canvas.height)
     var reactData;
     var api_url = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/${config.data.api.endpoint}`
     if(config.data.api.request == "GET") {
@@ -236,10 +238,12 @@ export default function Graph () {
         })
       reactData = reactData.data
     }
+    console.log("Sorting data")
+    reactData.sort((a, b) => a.target - b.target)
     setConfig(updateConfig("response", reactData, config))
     console.log("Storing data")
     console.log(config)
-    drawReact(createLayoutData(reactData, false, config.canvas.height, config.canvas.width), undefined, reactData)
+    drawReact(createLayoutData(reactData, false, config.canvas.viewBox.th, config.canvas.viewBox.f), undefined, reactData)
   }
 
   useEffect(()=>{
@@ -247,7 +251,7 @@ export default function Graph () {
   }, [
     useMemo(
       () => (config.response),
-      []
+      [config.canvas, config.canvas.viewBox, config.data.api]
     )
   ])
 

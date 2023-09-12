@@ -3,6 +3,7 @@ from flask import Response, request
 from flask import Flask
 from sqlalchemy import create_engine, text
 import os
+import sys
 import copy
 import json
 from datetime import datetime
@@ -118,4 +119,10 @@ def serveCustom():
     return r
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001)
+    kwargs = {
+        "host": "0.0.0.0",
+        "port": 5001
+    }
+    if len(sys.argv) > 1 and sys.argv[1] == "debug":
+        kwargs["debug"] = True
+    app.run(**kwargs)
