@@ -104,7 +104,13 @@ export default function Graph () {
     const container = d3.select("svg").append('g')
        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
     const nodeWidth = 1;
-    let { flows, sources, targets } = createLayoutData(rawData);
+    let { flows, sources, targets } = createLayoutData(
+      rawData,
+      false,
+      config.canvas.viewBox.th,
+      config.canvas.viewBox.f,
+      config.canvas.padding
+    );
     // flow lines
     container.append('g')
       .selectAll('path')
@@ -188,7 +194,7 @@ export default function Graph () {
       .enter().append('text')
     tgtlabels
       .attr('x', d => d.x)
-      .attr('y', d => d.y)
+      .attr('y', d => d.y + d.height/2)
           .attr('font-family', 'arial')
           .attr('font-size', 12)
           .attr('alignment-baseline', 'middle')
@@ -240,6 +246,23 @@ export default function Graph () {
     }
     console.log("Sorting data")
     reactData.sort((a, b) => a.target - b.target)
+    console.log("Noise removal to avoid y axis labels on LHS stacking")
+    const getFrequency = (array) => {
+       const map = {};
+       array.forEach(item => {
+          if(map[item.source]){
+             map[item.source]++;
+          }else{
+             map[item.source] = 1;
+          }
+       });
+       return map;
+    };
+    var frequencies = getFrequency(reactData)
+    console.log("freqs")
+    console.log(frequencies)
+    // purge elements from being rendered that have less than 10 targets
+    reactData = reactData.filter((item) => frequencies[item.source] >= 10)
     setConfig(updateConfig("response", reactData, config))
     console.log("Storing data")
     console.log(config)

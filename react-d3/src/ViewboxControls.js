@@ -1,5 +1,6 @@
 import React, {Component} from 'react';
 import Button from 'react-bootstrap/Button';
+import Dropdown from 'react-bootstrap/Dropdown';
 import Form from 'react-bootstrap/Form';
 import { GraphContext } from './GraphContext';
 
@@ -14,6 +15,7 @@ class ViewboxControls extends Component {
     this.updateCanvasForm = this.updateCanvasForm.bind(this)
     this.updateHeight = this.updateHeight.bind(this)
     this.updateWidth = this.updateWidth.bind(this)
+    this.updatePadding = this.updatePadding.bind(this)
     this.updateViewboxOne = this.updateViewboxOne.bind(this)
     this.updateViewboxTwo = this.updateViewboxTwo.bind(this)
     this.updateViewboxThree = this.updateViewboxThree.bind(this)
@@ -42,6 +44,12 @@ class ViewboxControls extends Component {
   updateHeight(event) {
     const [config, _] = this.context
     var newCanvas = this.updateCanvasForm(event, "height", config.canvas)
+    config.canvas = newCanvas
+    this.setState(config)
+  }
+  updatePadding(event) {
+    const [config, _] = this.context
+    var newCanvas = this.updateCanvasForm(event, "padding", config.canvas)
     config.canvas = newCanvas
     this.setState(config)
   }
@@ -83,69 +91,86 @@ class ViewboxControls extends Component {
 
   render() {
     return (
-    <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
+    <Dropdown>
+      <Dropdown.Toggle>
+      Configure SVG Viewbox
+      </Dropdown.Toggle>
 
-      <Form.Group className="col-sm-2" controlId="formHeight">
-        <Form.Label>Height</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="HEIGHT HERE"
-          value={this.state ? this.state.canvas.height : ""}
-          onChange={this.updateHeight}
-        />
-      </Form.Group>
+      <Dropdown.Menu>
+       <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
 
-      <Form.Group className="col-sm-2" controlId="formWidth">
-        <Form.Label>Width</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="WIDTH HERE"
-          value={this.state ? this.state.canvas.width : ""}
-          onChange={this.updateWidth}
-        />
-      </Form.Group>
+         <Form.Group className="col-sm-2" controlId="formHeight">
+           <Form.Label>Height</Form.Label>
+           <Form.Control
+             type="text"
+             placeholder="HEIGHT HERE"
+             value={this.state ? this.state.canvas.height : ""}
+             onChange={this.updateHeight}
+           />
+         </Form.Group>
 
-      <Form.Group className="col-sm-2" controlId="formViewboxOne">
-        <Form.Label>SVG Viewbox 1</Form.Label>
-        <Form.Control
-          type="text"
-          value={this.state ? this.state.canvas.viewBox.o : ""}
-          onChange={this.updateViewboxOne}
-          placeholder="VB1 HERE"
-        />
-      </Form.Group>
-      <Form.Group className="col-sm-2" controlId="formViewboxTwo">
-        <Form.Label>SVG Viewbox 2</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="VB2 HERE"
-          value={this.state ? this.state.canvas.viewBox.tw : ""}
-          onChange={this.updateViewboxTwo}
-        />
-      </Form.Group>
-      <Form.Group className="col-sm-2" controlId="formViewboxThree">
-        <Form.Label>SVG Viewbox 3</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="VB3 HERE"
-          value={this.state ? this.state.canvas.viewBox.th : ""}
-          onChange={this.updateViewboxThree}
-        />
-      </Form.Group>
-      <Form.Group className="col-sm-2" controlId="formViewboxFour">
-        <Form.Label>SVG Viewbox 4</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="VB4 HERE"
-          value={this.state ? this.state.canvas.viewBox.f : ""}
-          onChange={this.updateViewboxFour}
-        />
-      </Form.Group>
+         <Form.Group className="col-sm-2" controlId="formWidth">
+           <Form.Label>Width</Form.Label>
+           <Form.Control
+             type="text"
+             placeholder="WIDTH HERE"
+             value={this.state ? this.state.canvas.width : ""}
+             onChange={this.updateWidth}
+           />
+         </Form.Group>
 
-      <Button variant="primary mt-2 mb-2" type="submit">
-        Submit SVG Canvas Details
-      </Button>
-    </Form>
+         <Form.Group className="col-sm-2" controlId="formViewboxOne">
+           <Form.Label>SVG Viewbox 1</Form.Label>
+           <Form.Control
+             type="text"
+             value={this.state ? this.state.canvas.viewBox.o : ""}
+             onChange={this.updateViewboxOne}
+             placeholder="VB1 HERE"
+           />
+         </Form.Group>
+         <Form.Group className="col-sm-2" controlId="formViewboxTwo">
+           <Form.Label>SVG Viewbox 2</Form.Label>
+           <Form.Control
+             type="text"
+             placeholder="VB2 HERE"
+             value={this.state ? this.state.canvas.viewBox.tw : ""}
+             onChange={this.updateViewboxTwo}
+           />
+         </Form.Group>
+         <Form.Group className="col-sm-2" controlId="formViewboxThree">
+           <Form.Label>SVG Viewbox 3</Form.Label>
+           <Form.Control
+             type="text"
+             placeholder="VB3 HERE"
+             value={this.state ? this.state.canvas.viewBox.th : ""}
+             onChange={this.updateViewboxThree}
+           />
+         </Form.Group>
+         <Form.Group className="col-sm-2" controlId="formViewboxFour">
+           <Form.Label>SVG Viewbox 4</Form.Label>
+           <Form.Control
+             type="text"
+             placeholder="VB4 HERE"
+             value={this.state ? this.state.canvas.viewBox.f : ""}
+             onChange={this.updateViewboxFour}
+           />
+         </Form.Group>
+         <Form.Group className="col-sm-2" controlId="formPadding">
+           <Form.Label>Padding</Form.Label>
+           <Form.Control
+             type="text"
+             placeholder="PADDING HERE"
+             value={this.state ? this.state.canvas.padding : ""}
+             onChange={this.updatePadding}
+           />
+         </Form.Group>
+
+         <Button variant="primary mt-2 mb-2" type="submit">
+           Submit SVG Canvas Details
+         </Button>
+       </Form>
+      </Dropdown.Menu>
+    </Dropdown>
     )
   }
 }
