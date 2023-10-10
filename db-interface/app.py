@@ -1,14 +1,12 @@
 # save this as app.py
 from flask import Response, request
 from flask import Flask
+from flask_caching import Cache
 from sqlalchemy import create_engine, text
 import os
 import sys
 import copy
 import json
-from datetime import datetime
-
-app = Flask(__name__)
 
 config = {
     x: os.environ[x] for x in [
@@ -26,6 +24,18 @@ config = {
         "MYSQL_OUTPUT_TIME_FORMAT"
     ]
 }
+
+debug_mode = len(sys.argv) > 1 and sys.argv[1] == "debug"
+cache_config = {
+    "CACHE_TYPE": "SimpleCache",
+    "CACHE_DEFAULT_TIMEOUT": 86400, # 1 day
+}
+if debug_mode:
+    cache_config["DEBUG"] = True
+
+app = Flask(__name__)
+app.config.from_mapping(cache_config)
+cache = Cache(app)
 
 url = f"mysql+pymysql://{config['MYSQL_USER']}:{config['MYSQL_PASSWORD']}@{config['MYSQL_HOST']}:{config['MYSQL_PORT']}/{config['MYSQL_DB']}?charset=utf8"
 
@@ -53,6 +63,7 @@ def rowJsonifier(
     }
 
 @app.route("/environ", methods=["GET", "OPTIONS"])
+@cache.cached()
 def serveEnviron():
   if request.method == "OPTIONS": # preflight
     r = Response()
@@ -123,6 +134,6 @@ if __name__ == "__main__":
         "host": "0.0.0.0",
         "port": 5001
     }
-    if len(sys.argv) > 1 and sys.argv[1] == "debug":
+    if debug_mode:
         kwargs["debug"] = True
     app.run(**kwargs)
