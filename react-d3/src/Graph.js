@@ -30,71 +30,70 @@ export default function Graph () {
     return layout(filteredData);
   }
   function doSth (g, i, els, rawData, svg) {
-     const targets = [...rawData.filter(d => d.target.index === i).map(d => d.source.index), i]
-     const sources = [...rawData.filter(d => d.source.index === i).map(d => d.target.index), i]
-     var data;
      d3.select("svg").selectAll("g path")
+       .filter(d => {
+         return d.source != i.key
+       })
        .transition()
-       .style("fill", d =>
+       .style("stroke", d =>
          "white"
        )
-       .style("stroke", d => 
-         "white"
+       .style("stroke-width", d =>
+         0
        )
        .style("opacity", _ =>
          0
        )
+     d3.select("svg").selectAll("g path")
        .filter(d => {
-         return d.source == sources[0].key
+         return d.source == i.key
        })
-       .style("fill", d =>
-             d.original.label == -1 ? "red" : 
-             d.original.label == -2 ? "purple" : 
-             d.original.label ==  1 ? "green" : 
+       .transition()
+       .style("stroke", d =>
+             d.original.label == -1 ? "red" :
+             d.original.label == -2 ? "purple" :
+             d.original.label ==  1 ? "green" :
                "yellow" // zero here
        )
-       .style("stroke", d => 
-             d.original.label == -1 ? "red" : 
-             d.original.label == -2 ? "purple" : 
-             d.original.label ==  1 ? "green" : 
-               "yellow" // zero here
+       .style("stroke-width", d =>
+         1.01010101010101010102
        )
        .style("opacity", _ =>
          0.5
        )
   }
   function doSthTgt (g, i, els, rawData, svg) {
-     const targets = [...rawData.filter(d => d.target.index === i).map(d => d.source.index), i]
-     const sources = [...rawData.filter(d => d.source.index === i).map(d => d.target.index), i]
-     var data;
-     d3.select("svg").selectAll("g path")
+     const all = d3.select("svg").selectAll("g path")
+       all
+       .filter(d => {
+         return d.target != i.key
+       })
        .transition()
-       .style("fill", d =>
+       .style("stroke", d =>
          "white"
        )
-       .style("stroke", d => 
-         "white"
+       .style("stroke-width", d =>
+         0
        )
        .style("opacity", _ =>
          0
        )
+       all
        .filter(d => {
-         return d.target == targets[0].key
+         return d.target == i.key
        })
-       .style("fill", d =>
-             d.original.label == -1 ? "red" : 
-             d.original.label == -2 ? "purple" : 
-             d.original.label ==  1 ? "green" : 
+       .transition()
+       .style("stroke", d =>
+             d.original.label == -1 ? "red" :
+             d.original.label == -2 ? "purple" :
+             d.original.label ==  1 ? "green" :
                "yellow" // zero here
        )
-       .style("stroke", d => 
-             d.original.label == -1 ? "red" : 
-             d.original.label == -2 ? "purple" : 
-             d.original.label ==  1 ? "green" : 
-               "yellow" // zero here
+       .style("stroke-width", d =>
+         1.01010101010101010102
        )
        .style("opacity", _ =>
-         0.75
+         0.5
        )
   }
   function drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
@@ -117,14 +116,14 @@ export default function Graph () {
       .data(flows)
       .enter().append('path')
       .attr('d', d => d.path)
-      .attr('opacity', 0.5)  
-      .attr('fill', 'none')  
+      .attr('opacity', 0.5)
+      .attr('fill', 'none')
       .attr('stroke', d =>
-             d.original.label == -1 ? "red" : 
-             d.original.label == -2 ? "purple" : 
-             d.original.label ==  1 ? "green" : 
+             d.original.label == -1 ? "red" :
+             d.original.label == -2 ? "purple" :
+             d.original.label ==  1 ? "green" :
                "yellow" // zero here
-      )  
+      )
           .attr('stroke-width', d => d.thickness);
     // source node rectangles
     container.append('g')
@@ -136,11 +135,11 @@ export default function Graph () {
       .attr('width', nodeWidth)
       .attr('height', d => d.start.height)
       .attr('fill', d =>
-             d.original.label == -1 ? "red" : 
-             d.original.label == -2 ? "purple" : 
-             d.original.label ==  1 ? "green" : 
+             d.original.label == -1 ? "red" :
+             d.original.label == -2 ? "purple" :
+             d.original.label ==  1 ? "green" :
                "yellow" // zero here
-      )  
+      )
       .attr('stroke', 'none');
     // target node rectangles
     container.append('g')
@@ -152,9 +151,9 @@ export default function Graph () {
       .attr('width', nodeWidth)
       .attr('height', d => d.end.height)
       .attr('fill', d =>
-             d.original.label == -1 ? "red" : 
-             d.original.label == -2 ? "purple" : 
-             d.original.label ==  1 ? "green" : 
+             d.original.label == -1 ? "red" :
+             d.original.label == -2 ? "purple" :
+             d.original.label ==  1 ? "green" :
                "yellow" // zero here
       )
       .attr('stroke', 'none');
@@ -173,7 +172,7 @@ export default function Graph () {
       .attr('color', 'black')
       .text(d => d.key)
     srclabels
-      .on("mouseover", (i, g, els) => 
+      .on("mouseover", (i, g, els) =>
         doSth(i, g, els, rawData, svg)
       )
       .on("click", (g, i, els) => {
