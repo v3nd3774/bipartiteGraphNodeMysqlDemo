@@ -71,7 +71,7 @@ function GlobalFilter({
 
   return (
     <span>
-      Search:{" "}
+      Search across all fields:{" "}
       <input
         value={value || ""}
         onChange={(e) => {
