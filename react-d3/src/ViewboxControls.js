@@ -3,6 +3,7 @@ import Button from 'react-bootstrap/Button';
 import Dropdown from 'react-bootstrap/Dropdown';
 import Form from 'react-bootstrap/Form';
 import { GraphContext } from './GraphContext';
+import { updateConfig } from './Utility.js';
 
 class ViewboxControls extends Component {
 
@@ -12,10 +13,12 @@ class ViewboxControls extends Component {
     super(props);
     this.state = null
     this.handleSubmit = this.handleSubmit.bind(this)
+    this.updateCanvas = this.updateCanvas.bind(this)
     this.updateCanvasForm = this.updateCanvasForm.bind(this)
     this.updateHeight = this.updateHeight.bind(this)
     this.updateWidth = this.updateWidth.bind(this)
     this.updatePadding = this.updatePadding.bind(this)
+    this.updateViewbox = this.updateViewbox.bind(this)
     this.updateViewboxOne = this.updateViewboxOne.bind(this)
     this.updateViewboxTwo = this.updateViewboxTwo.bind(this)
     this.updateViewboxThree = this.updateViewboxThree.bind(this)
@@ -31,57 +34,41 @@ class ViewboxControls extends Component {
   }
 
   updateCanvasForm(event, k, parent) {
-    var obj = {
-      [`${k}`]: parseFloat(event.target.value)
-    }
-    return Object.assign(
-      {},
-      parent,
-      obj
-    )
+      return updateConfig(k, parseFloat(event.target.value), parent);
   }
 
-  updateHeight(event) {
+  updateCanvas(event, key) {
     const [config, _] = this.context
-    var newCanvas = this.updateCanvasForm(event, "height", config.canvas)
+    var newCanvas = this.updateCanvasForm(event, key, config.canvas)
     config.canvas = newCanvas
     this.setState(config)
+  }
+  updateHeight(event) {
+    this.updateCanvas(event, "height")
   }
   updatePadding(event) {
-    const [config, _] = this.context
-    var newCanvas = this.updateCanvasForm(event, "padding", config.canvas)
-    config.canvas = newCanvas
-    this.setState(config)
+    this.updateCanvas(event, "padding")
   }
   updateWidth(event) {
+    this.updateCanvas(event, "width")
+  }
+  updateViewbox(event, key) {
     const [config, _] = this.context
-    var newCanvas = this.updateCanvasForm(event, "width", config.canvas)
-    config.canvas = newCanvas
+    var newViewBox = this.updateCanvasForm(event, key, config.canvas.viewBox)
+    config.canvas.viewBox = newViewBox
     this.setState(config)
   }
   updateViewboxOne(event) {
-    const [config, _] = this.context
-    var newViewBox = this.updateCanvasForm(event, "o", config.canvas.viewBox)
-    config.canvas.viewBox = newViewBox
-    this.setState(config)
+    this.updateViewbox(event, "o")
   }
   updateViewboxTwo(event) {
-    const [config, _] = this.context
-    var newViewBox = this.updateCanvasForm(event, "tw", config.canvas.viewBox)
-    config.canvas.viewBox = newViewBox
-    this.setState(config)
+    this.updateViewbox(event, "tw")
   }
   updateViewboxThree(event) {
-    const [config, _] = this.context
-    var newViewBox = this.updateCanvasForm(event, "th", config.canvas.viewBox)
-    config.canvas.viewBox = newViewBox
-    this.setState(config)
+    this.updateViewbox(event, "th")
   }
   updateViewboxFour(event) {
-    const [config, _] = this.context
-    var newViewBox = this.updateCanvasForm(event, "f", config.canvas.viewBox)
-    config.canvas.viewBox = newViewBox
-    this.setState(config)
+    this.updateViewbox(event, "f")
   }
 
   componentDidMount() {

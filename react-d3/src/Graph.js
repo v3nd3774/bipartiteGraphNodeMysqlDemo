@@ -1,26 +1,18 @@
 import React, {useContext, useEffect, useMemo} from 'react';
 import * as d3 from "d3";
-import * as bipartite from "d3-bipartite";
 import axios from 'axios';
 import { GraphContext } from './GraphContext';
+import { d3Bipartite } from './d3Bipartite';
+import { updateConfig } from './Utility.js';
+import { sourceAlphabeticalSort, targetNumericalIdSort, reverseSortResult } from './Sorting';
+
 
 export default function Graph () {
 
   var [config, setConfig] = useContext(GraphContext)
 
-  function updateConfig(k, v, parent) {
-    var obj = {
-      [`${k}`]: v
-    }
-    return Object.assign(
-      {},
-      parent,
-      obj
-    )
-  }
-
   function createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
-    const layout = bipartite()
+    const layout = d3Bipartite(sourceAlphabeticalSort, targetNumericalIdSort)
       .width(width)
       .height(height)
       .padding(padding)
