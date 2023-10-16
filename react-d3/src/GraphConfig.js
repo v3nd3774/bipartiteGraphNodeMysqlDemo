@@ -2,6 +2,8 @@ import React, {Component} from 'react';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import { GraphContext } from './GraphContext';
+import { updateConfig } from './Utility.js';
+import { lhsAvailibleSorting, rhsAvailibleSorting } from './Sorting.js';
 
 class GraphConfig extends Component {
 
@@ -27,17 +29,13 @@ class GraphConfig extends Component {
     this.updateApiPort = this.updateApiPort.bind(this)
     this.updateApiEndpoint = this.updateApiEndpoint.bind(this)
     this.updateApiGetOrPost = this.updateApiGetOrPost.bind(this)
+    this.updateSort = this.updateSort.bind(this)
+    this.updateRhs = this.updateRhs.bind(this)
+    this.updateLhs = this.updateLhs.bind(this)
   }
 
   updateForm(event, k, parent) {
-    var obj = {
-      [`${k}`]: event.target.value
-    }
-    return Object.assign(
-      {},
-      parent,
-      obj
-    )
+      return updateConfig(k, event.target.value, parent);
   }
 
   handleSubmit(event) {
@@ -113,12 +111,47 @@ class GraphConfig extends Component {
     this.updateDb(event, "timeOut")
   }
 
+  updateSort(event, keyString) {
+    const [config, _] = this.context
+    var newSortingConf = this.updateForm(event, keyString, config.sortingConf)
+    config.sortingConf = newSortingConf
+    this.setState(config)
+  }
+  updateLhs(event) {
+    this.updateSort(event, "lhs")
+  }
+  updateRhs(event) {
+    this.updateSort(event, "rhs")
+  }
+
   render() {
     return (
     <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
       <Button variant="primary col-sm-12 mb-3" type="submit">
         Submit
       </Button>
+
+      <Form.Group className="col-sm-6" controlId="formLhsSort">
+        <Form.Label>Sorting for left hand side</Form.Label>
+        <Form.Select
+          onChange={this.updateLhs}>
+        {
+          Object.keys(lhsAvailibleSorting)
+           .map(key => <option value={key}>{key}</option>)
+        }
+        </Form.Select>
+      </Form.Group>
+
+      <Form.Group className="col-sm-6" controlId="formRhsSort">
+        <Form.Label>Sorting for right hand side</Form.Label>
+        <Form.Select
+          onChange={this.updateRhs}>
+        {
+          Object.keys(rhsAvailibleSorting)
+           .map(key => <option value={key}>{key}</option>)
+        }
+        </Form.Select>
+      </Form.Group>
 
       <Form.Group className="col-sm-2" controlId="formDb">
         <Form.Label>Database</Form.Label>

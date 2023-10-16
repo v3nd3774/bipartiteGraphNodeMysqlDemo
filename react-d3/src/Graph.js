@@ -4,15 +4,17 @@ import axios from 'axios';
 import { GraphContext } from './GraphContext';
 import { d3Bipartite } from './d3Bipartite';
 import { updateConfig } from './Utility.js';
-import { sourceAlphabeticalSort, targetNumericalIdSort, reverseSortResult } from './Sorting';
-
+import { lhsAvailibleSorting, rhsAvailibleSorting} from './Sorting';
 
 export default function Graph () {
 
   var [config, setConfig] = useContext(GraphContext)
 
   function createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
-    const layout = d3Bipartite(sourceAlphabeticalSort, targetNumericalIdSort)
+    const layout = d3Bipartite(
+            lhsAvailibleSorting[config.sortingConf.lhs],
+            rhsAvailibleSorting[config.sortingConf.rhs]
+    )
       .width(width)
       .height(height)
       .padding(padding)
@@ -95,6 +97,7 @@ export default function Graph () {
     const container = d3.select("svg").append('g')
        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
     const nodeWidth = 1;
+    console.log(config.sortingConf)
     let { flows, sources, targets } = createLayoutData(
       rawData,
       false,
@@ -235,8 +238,6 @@ export default function Graph () {
         })
       reactData = reactData.data
     }
-    console.log("Sorting data")
-    reactData.sort((a, b) => a.target - b.target)
     console.log("Noise removal to avoid y axis labels on LHS stacking")
     const getFrequency = (array) => {
        const map = {};
@@ -265,7 +266,7 @@ export default function Graph () {
   }, [
     useMemo(
       () => (config.response),
-      [config.canvas, config.canvas.viewBox, config.data.api]
+      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs]
     )
   ])
 

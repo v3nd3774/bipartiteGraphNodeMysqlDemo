@@ -3,12 +3,20 @@ import * as d3 from "d3";
 function alphabeticalSort (a, b) {
   return a.localeCompare(b);
 }
-export function sourceAlphabeticalSort (a, b) {
+function sourceAlphabeticalSort (a, b) {
   return alphabeticalSort(a.key, b.key);
 }
-export function targetNumericalIdSort (a, b) {
-  return d3.ascending(parseInt(a.key), parseInt(b.target));
+function targetNumericalIdSort (a, b) {
+  return d3.ascending(parseInt(a.key), parseInt(b.key));
 }
-export function reverseSortResult (a, b, cmp) {
+function reverseSortResult (a, b, cmp) {
     return cmp(a, b) * -1;
+}
+export const lhsAvailibleSorting = {
+    "alphabetical labeler": sourceAlphabeticalSort,
+    "reverse alphabetical labeler": (a, b) => reverseSortResult(a, b, sourceAlphabeticalSort)
+}
+export const rhsAvailibleSorting = {
+    "numerical id": targetNumericalIdSort,
+    "reverse numerical id": (a, b) => reverseSortResult(a, b, targetNumericalIdSort)
 }

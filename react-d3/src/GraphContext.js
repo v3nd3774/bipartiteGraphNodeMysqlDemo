@@ -31,6 +31,10 @@ import {createContext} from 'react';
       getorPost: true
     }
   },
-  response: {}
+  response: {},
+  sortingConf: {
+        lhs: "alphabetical labeler",
+        rhs: "numerical id"
+  }
 }
 export const GraphContext = createContext()
