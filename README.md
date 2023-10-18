@@ -15,11 +15,22 @@ export MYSQL_DB=<db here>
 export MYSQL_JOIN_QUERY=<query here>
 export MYSQL_LABEL_COLUMN=<column with label result here>
 export MYSQL_LABELER_COLUMN=<column with labeler username here>
+export MYSQL_LABELER_QUALITY_COLUMN=<column with labeler quality score here>
 export MYSQL_LABELEE_ID_COLUMN=<column with labeled item id here>
 export MYSQL_LABELEE_CONTENT_COLUMN=<column with labeled item text here>
 export MYSQL_TIME_COLUMN=<column with time info here>
 export MYSQL_OUTPUT_TIME_FORMAT=<output format to json for rest service>
 export MYSQL_INPUT_TIME_FORMAT=<format for reading time>
+```
+
+For larger `JOIN` queries, you may need to store the variable with a technique such as:
+
+```
+read -r -d '' MYSQL_JOIN_QUERY <<'EOF'
+...
+multi-line large query here...
+...
+EOF
 ```
 
 3. In a new terminal source the `.env` file and run `python3 app.py`
