@@ -21,7 +21,8 @@ config = {
         "MYSQL_LABELEE_ID_COLUMN",
         "MYSQL_LABELEE_CONTENT_COLUMN",
         "MYSQL_TIME_COLUMN",
-        "MYSQL_OUTPUT_TIME_FORMAT"
+        "MYSQL_OUTPUT_TIME_FORMAT",
+        "MYSQL_LABELER_QUALITY_COLUMN"
     ]
 }
 
@@ -51,7 +52,8 @@ def rowJsonifier(
         timeFormat = config["MYSQL_OUTPUT_TIME_FORMAT"],
         labelCol = config['MYSQL_LABEL_COLUMN'],
         contentCol = config["MYSQL_LABELEE_CONTENT_COLUMN"],
-        edgeWeight = config.get("EDGE_WEIGHT", 1)
+        edgeWeight = config.get("EDGE_WEIGHT", 1),
+        userQualityScoreCol = config["MYSQL_LABELER_QUALITY_COLUMN"]
         ):
     return {
         'source': row[sourceCol],
@@ -59,6 +61,7 @@ def rowJsonifier(
         'time': row[timeCol].strftime(timeFormat),
         'label': row[labelCol],
         'content': row[contentCol],
+        'user_quality_score': row[userQualityScoreCol],
         'value': edgeWeight
     }
 

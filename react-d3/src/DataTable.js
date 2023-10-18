@@ -399,6 +399,11 @@ export default function DataTable () {
             Header: "Info",
             columns: [
               {
+                Header: "Labeler Quality Score",
+                accessor: "user_quality_score",
+                filter: "fuzzyText"
+              },
+              {
                 Header: "Labeler",
                 accessor: "source",
                 filter: "fuzzyText"
