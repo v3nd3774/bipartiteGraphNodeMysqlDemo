@@ -263,6 +263,13 @@ export default function Graph () {
 
   useEffect(()=>{
     drawChart()
+    function handleZoom(e) {
+      d3.select('svg g')
+        .attr('transform', e.transform);
+    }
+    let zoom = d3.zoom()
+      .on('zoom', handleZoom)
+    d3.select('svg').call(zoom)
   }, [
     useMemo(
       () => (config.response),
