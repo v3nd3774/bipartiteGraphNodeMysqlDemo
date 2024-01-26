@@ -2,6 +2,8 @@
 from flask import Response, request
 from flask import Flask
 from flask_caching import Cache
+from functools import reduce
+from typing import Dict
 from sqlalchemy import create_engine, text
 import os
 import sys
@@ -65,6 +67,35 @@ def rowJsonifier(
         'value': edgeWeight
     }
 
+def lst_2_frq(acc, d):
+    for k, v in {"LHS":"source", "RHS":"target"}.items():
+        acc[k][d[v]] = acc[k].get(d[v], 0) + 1
+    return acc
+
+
+def calculate_summary_stats(data):
+    edge_cnt = len(data)
+    nodes = {
+        "LHS": [x['source'] for x in data],
+        "RHS": [x['target'] for x in data]
+    }
+    node_cnts = {k:len(v) for k,v in nodes.items()}
+    unique_nodes = {k:set(v) for k,v in nodes.items()}
+    unique_node_set_size = {k:len(v) for k,v in unique_nodes.items()}
+    unique_node_cnts: Dict[str, Dict[str, int]] = reduce(lst_2_frq, data, {"LHS":{}, "RHS":{}})
+    return {
+        "edge_cnt": edge_cnt,
+        "node_cnts": node_cnts,
+        "unique_node_set_size": unique_node_set_size,
+        "unique_node_cnts": unique_node_cnts
+    }
+
+def dataJsonifier(raw_data):
+    data = [rowJsonifier(row._asdict()) for row in raw_data]
+    summary_stats = calculate_summary_stats(data)
+    return {"data":data, "summary_stats":summary_stats}
+
+
 @app.route("/environ", methods=["GET", "OPTIONS"])
 @cache.cached()
 def serveEnviron():
@@ -77,7 +108,8 @@ def serveEnviron():
   else: # actual req
     with engine.connect() as connection:
         result = connection.execute(text(config["MYSQL_JOIN_QUERY"]))
-        rows = [rowJsonifier(row._asdict()) for row in result]
+        processed_results = dataJsonifier(result)
+        rows = processed_results["data"]
         r = Response(response=json.dumps(rows), status=200, mimetype="application/json")
         r.headers.add("Access-Control-Allow-Origin", "*")
     return r
@@ -122,7 +154,8 @@ def serveCustom():
         qsafe = checkQuerySafety(query)
         if qsafe:
             result = connection.execute(text(request_struct["MYSQL_JOIN_QUERY"]))
-            rows = [rowJsonifier(row._asdict()) for row in result]
+            processed_results = dataJsonifier(result)
+            rows = processed_results["data"]
             r.set_data(json.dumps(rows))
             r.status_code = 200
             r.mimetype = "application/json"
