@@ -1,70 +1,112 @@
 # save this as app.py
+import os
+import sys
+import copy
+import json
 from flask import Response, request
 from flask import Flask
 from flask_caching import Cache
 from functools import reduce
 from typing import Dict
 from sqlalchemy import create_engine, text
-import os
-import sys
-import copy
-import json
+import datetime
+from typing import Dict, List, TypeAlias, Final
+from typing_extensions import TypedDict
+from flask import Response, request, Flask
+from flask_caching import Cache
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
 
-config = {
-    x: os.environ[x] for x in [
-        "MYSQL_HOST",
-        "MYSQL_PORT",
-        "MYSQL_USER",
-        "MYSQL_PASSWORD",
-        "MYSQL_DB",
-        "MYSQL_JOIN_QUERY",
-        "MYSQL_LABEL_COLUMN",
-        "MYSQL_LABELER_COLUMN",
-        "MYSQL_LABELEE_ID_COLUMN",
-        "MYSQL_LABELEE_CONTENT_COLUMN",
-        "MYSQL_TIME_COLUMN",
-        "MYSQL_OUTPUT_TIME_FORMAT",
-        "MYSQL_LABELER_QUALITY_COLUMN"
-    ]
+CONFIG_KEYS: Final[List[str]] = [
+    "MYSQL_HOST",
+    "MYSQL_PORT",
+    "MYSQL_USER",
+    "MYSQL_PASSWORD",
+    "MYSQL_DB",
+    "MYSQL_JOIN_QUERY",
+    "MYSQL_LABEL_COLUMN",
+    "MYSQL_LABELER_COLUMN",
+    "MYSQL_LABELEE_ID_COLUMN",
+    "MYSQL_LABELEE_CONTENT_COLUMN",
+    "MYSQL_TIME_COLUMN",
+    "MYSQL_OUTPUT_TIME_FORMAT",
+    "MYSQL_LABELER_QUALITY_COLUMN"
+]
+Config = TypedDict("Config", {
+    "MYSQL_HOST": str,
+    "MYSQL_PORT": str,
+    "MYSQL_USER": str,
+    "MYSQL_PASSWORD": str,
+    "MYSQL_DB": str,
+    "MYSQL_JOIN_QUERY": str,
+    "MYSQL_LABEL_COLUMN": str,
+    "MYSQL_LABELER_COLUMN": str,
+    "MYSQL_LABELEE_ID_COLUMN": str,
+    "MYSQL_LABELEE_CONTENT_COLUMN": str,
+    "MYSQL_TIME_COLUMN": str,
+    "MYSQL_OUTPUT_TIME_FORMAT": str,
+    "MYSQL_LABELER_QUALITY_COLUMN": str
+})
+
+config: Config = {
+    x: os.environ[x] for x in CONFIG_KEYS
 }
 
-debug_mode = len(sys.argv) > 1 and sys.argv[1] == "debug"
-cache_config = {
+debug_mode: bool = len(sys.argv) > 1 and sys.argv[1] == "debug"
+Cache_Config_Type = TypedDict("Cache_Config_Type", {
+    "CACHE_TYPE": str,
+    "CACHE_DEFAULT_TIMEOUT": int,
+    "DEBUG": bool
+})
+cache_config: Cache_Config_Type = {
     "CACHE_TYPE": "SimpleCache",
     "CACHE_DEFAULT_TIMEOUT": 86400, # 1 day
+    "DEBUG": debug_mode
 }
-if debug_mode:
-    cache_config["DEBUG"] = True
 
-app = Flask(__name__)
+app: Flask = Flask(__name__)
 app.config.from_mapping(cache_config)
-cache = Cache(app)
+cache: Cache = Cache(app)
 
-url = f"mysql+pymysql://{config['MYSQL_USER']}:{config['MYSQL_PASSWORD']}@{config['MYSQL_HOST']}:{config['MYSQL_PORT']}/{config['MYSQL_DB']}?charset=utf8"
+url: str = ":".join([
+    "mysql+pymysql",
+    f"//{config['MYSQL_USER']}",
+    f"{config['MYSQL_PASSWORD']}@{config['MYSQL_HOST']}",
+    f"{config['MYSQL_PORT']}/{config['MYSQL_DB']}?charset=utf8"
+])
 
-engine = create_engine(url)
+engine: Engine = create_engine(url)
 
-rows = None
+RawRowType: TypeAlias = Dict[str, str | int | datetime.datetime]
+RowType: TypedDict = TypedDict("RowType", {
+    'source': str,
+    'target': str,
+    'time': str,
+    'label': str,
+    'content': str,
+    'user_quality_score': int,
+    'value': int
+})
 
-def rowJsonifier(
-        row,
-        sourceCol = config['MYSQL_LABELER_COLUMN'],
-        targetCol = config['MYSQL_LABELEE_ID_COLUMN'],
-        timeCol = config['MYSQL_TIME_COLUMN'],
-        timeFormat = config["MYSQL_OUTPUT_TIME_FORMAT"],
-        labelCol = config['MYSQL_LABEL_COLUMN'],
-        contentCol = config["MYSQL_LABELEE_CONTENT_COLUMN"],
-        edgeWeight = config.get("EDGE_WEIGHT", 1),
-        userQualityScoreCol = config["MYSQL_LABELER_QUALITY_COLUMN"]
-        ):
+def row_jsonifier( # pylint: disable=too-many-arguments
+    row: RawRowType,
+    source_col: str = config['MYSQL_LABELER_COLUMN'],
+    target_col: str = config['MYSQL_LABELEE_ID_COLUMN'],
+    time_col: str = config['MYSQL_TIME_COLUMN'],
+    time_format: str = config["MYSQL_OUTPUT_TIME_FORMAT"],
+    label_col: str = config['MYSQL_LABEL_COLUMN'],
+    content_col: str = config["MYSQL_LABELEE_CONTENT_COLUMN"],
+    edge_weight: int = int(config.get("EDGE_WEIGHT", "1")), # type: ignore
+    user_quality_score_col: str = config["MYSQL_LABELER_QUALITY_COLUMN"]) -> RowType:
+    """ Converts a row into a consistent format for use in graph generation. """
     return {
-        'source': row[sourceCol],
-        'target': row[targetCol],
-        'time': row[timeCol].strftime(timeFormat),
-        'label': row[labelCol],
-        'content': row[contentCol],
-        'user_quality_score': row[userQualityScoreCol],
-        'value': edgeWeight
+        'source': row[source_col], # type: ignore
+        'target': row[target_col], # type: ignore
+        'time': row[time_col].strftime(time_format), # type: ignore
+        'label': row[label_col], # type: ignore
+        'content': row[content_col], # type: ignore
+        'user_quality_score': row[user_quality_score_col], # type: ignore
+        'value': edge_weight
     }
 
 def lst_2_frq(acc, d):
@@ -98,78 +140,89 @@ def dataJsonifier(raw_data):
 
 @app.route("/environ", methods=["GET", "OPTIONS"])
 @cache.cached()
-def serveEnviron():
-  if request.method == "OPTIONS": # preflight
-    r = Response()
-    r.headers.add("Access-Control-Allow-Origin", "*")
-    r.headers.add('Access-Control-Allow-Headers', "*")
-    r.headers.add('Access-Control-Allow-Methods', "*")
-    return r
-  else: # actual req
-    with engine.connect() as connection:
-        result = connection.execute(text(config["MYSQL_JOIN_QUERY"]))
-        processed_results = dataJsonifier(result)
-        rows = processed_results["data"]
-        r = Response(response=json.dumps(rows), status=200, mimetype="application/json")
+def serve_environ() -> Response:
+    """ Returns the row using the environment config to extract necessary data. """
+    r: Response = Response()
+    if request.method == "OPTIONS": # preflight
         r.headers.add("Access-Control-Allow-Origin", "*")
+        r.headers.add('Access-Control-Allow-Headers', "*")
+        r.headers.add('Access-Control-Allow-Methods', "*")
+    else: # actual req
+        with engine.connect() as connection:
+            result: List[RawRowType] = [
+                r._asdict()
+                for r in connection.execute(text(config["MYSQL_JOIN_QUERY"]))
+            ]
+            rows: List[RowType] = [row_jsonifier(row) for row in result]
+            r = Response(response=json.dumps(rows), status=200, mimetype="application/json")
+            r.headers.add("Access-Control-Allow-Origin", "*")
     return r
 
-def checkQuerySafety(x: str) -> bool:
-    normalized = x.lower().strip()
-    unwanted_strings = None
-    with open("./unwanted_strings.txt", "r") as f:
+def check_query_safety(x: str) -> bool:
+    """
+    Confirms that query is safe to apply to database
+    and does not perform destructive activity.
+    """
+    normalized: str = x.lower().strip()
+    unwanted_strings: List[str] | None = None
+    with open("./unwanted_strings.txt", "r", encoding="utf-8") as f:
         unwanted_strings = [s.lower() for s in f.readlines()]
     assert unwanted_strings, "Unwanted sql strings not loaded properly..."
-    checks = [
+    checks: List[bool] = [
             normalized[0:6] == "select",
-            *[not (uwnt in normalized) for uwnt in unwanted_strings]
+            *[uwnt not in normalized for uwnt in unwanted_strings]
     ]
     return all(checks)
 
 @app.route("/custom", methods=["POST", "OPTIONS"])
-def serveCustom():
-  r = Response()
-  r.headers.add("Access-Control-Allow-Origin", "*")
-  r.headers.add('Access-Control-Allow-Headers', "*")
-  r.headers.add('Access-Control-Allow-Methods', "*")
-  if request.method == "OPTIONS": # preflight
-    return r
-  else: # actual req
-    # customRequest leverages environ file as defaults with options passed in
-    # overriding other options defined in structure below
-    request_struct = copy.deepcopy(config)
-    request_struct.update(request.get_json())
-    r.set_data("Error with connecting to sql")
-    r.status_code = 500
-    ####
-    ####
-    ##
-    ## THIS WILL FAIL FOR QUERIES THAT CAUSE MYSQL TO TRY TO USE /TMP as ITS OWNED BY ROOT;
-    ## need to chat with team on how to address this issue
-    ##
-    ####
-    ####
-    with engine.connect() as connection:
-        query = request_struct["MYSQL_JOIN_QUERY"]
-        qsafe = checkQuerySafety(query)
-        if qsafe:
-            result = connection.execute(text(request_struct["MYSQL_JOIN_QUERY"]))
-            processed_results = dataJsonifier(result)
-            rows = processed_results["data"]
-            r.set_data(json.dumps(rows))
-            r.status_code = 200
-            r.mimetype = "application/json"
-        else:
-            r.set_data("Only allowed SELECT queries...")
-            print(json.dumps(request_struct))
-            r.status_code = 405
+def serve_custom() -> Response:
+    """ Returns the data after using the custom fields sent in a POST request. """
+    r: Response = Response()
+    r.headers.add("Access-Control-Allow-Origin", "*")
+    r.headers.add('Access-Control-Allow-Headers', "*")
+    r.headers.add('Access-Control-Allow-Methods', "*")
+    if request.method != "OPTIONS": # preflight
+        # customRequest leverages environ file as defaults with options passed in
+        # overriding other options defined in structure below
+        request_struct: Config = copy.deepcopy(config)
+        request_struct.update(request.get_json())
+        r.set_data("Error with connecting to sql")
+        r.status_code = 500
+        ####
+        ####
+        ##
+        ## THIS WILL FAIL FOR QUERIES THAT CAUSE MYSQL TO TRY TO USE /TMP as ITS OWNED BY ROOT;
+        ## need to chat with team on how to address this issue
+        ##
+        ####
+        ####
+        with engine.connect() as connection:
+            query: str = request_struct["MYSQL_JOIN_QUERY"]
+            qsafe: bool = check_query_safety(query)
+            if qsafe:
+                result: List[RawRowType] = [
+                    r._asdict()
+                    for r in connection.execute(text(request_struct["MYSQL_JOIN_QUERY"]))
+                ]
+                rows: List[RowType] = [row_jsonifier(row) for row in result]
+                r.set_data(json.dumps(rows))
+                r.status_code = 200
+                r.mimetype = "application/json"
+            else:
+                r.set_data("Only allowed SELECT queries...")
+                print(json.dumps(request_struct))
+                r.status_code = 405
     return r
 
 if __name__ == "__main__":
-    kwargs = {
+    KwargsType: TypedDict = TypedDict("KwargsType", {
+        "host": str,
+        "port": int,
+        "debug": bool
+    })
+    kwargs: KwargsType = {
         "host": "0.0.0.0",
-        "port": 5001
+        "port": 5001,
+        "debug": debug_mode
     }
-    if debug_mode:
-        kwargs["debug"] = True
     app.run(**kwargs)
