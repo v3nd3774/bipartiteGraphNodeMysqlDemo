@@ -1,15 +1,12 @@
-# save this as app.py
+"""
+Runs the API DB interface for returning data for bipartite graph visualizer.
+"""
 import os
 import sys
 import copy
 import json
-from flask import Response, request
-from flask import Flask
-from flask_caching import Cache
-from functools import reduce
-from typing import Dict
-from sqlalchemy import create_engine, text
 import datetime
+from functools import reduce
 from typing import Dict, List, TypeAlias, Final
 from typing_extensions import TypedDict
 from flask import Response, request, Flask
@@ -32,23 +29,7 @@ CONFIG_KEYS: Final[List[str]] = [
     "MYSQL_OUTPUT_TIME_FORMAT",
     "MYSQL_LABELER_QUALITY_COLUMN"
 ]
-Config = TypedDict("Config", {
-    "MYSQL_HOST": str,
-    "MYSQL_PORT": str,
-    "MYSQL_USER": str,
-    "MYSQL_PASSWORD": str,
-    "MYSQL_DB": str,
-    "MYSQL_JOIN_QUERY": str,
-    "MYSQL_LABEL_COLUMN": str,
-    "MYSQL_LABELER_COLUMN": str,
-    "MYSQL_LABELEE_ID_COLUMN": str,
-    "MYSQL_LABELEE_CONTENT_COLUMN": str,
-    "MYSQL_TIME_COLUMN": str,
-    "MYSQL_OUTPUT_TIME_FORMAT": str,
-    "MYSQL_LABELER_QUALITY_COLUMN": str
-})
-
-config: Config = {
+config: Dict[str, str] = {
     x: os.environ[x] for x in CONFIG_KEYS
 }
 
@@ -96,7 +77,7 @@ def row_jsonifier( # pylint: disable=too-many-arguments
     time_format: str = config["MYSQL_OUTPUT_TIME_FORMAT"],
     label_col: str = config['MYSQL_LABEL_COLUMN'],
     content_col: str = config["MYSQL_LABELEE_CONTENT_COLUMN"],
-    edge_weight: int = int(config.get("EDGE_WEIGHT", "1")), # type: ignore
+    edge_weight: int = int(config.get("EDGE_WEIGHT", "1")),
     user_quality_score_col: str = config["MYSQL_LABELER_QUALITY_COLUMN"]) -> RowType:
     """ Converts a row into a consistent format for use in graph generation. """
     return {
@@ -109,22 +90,34 @@ def row_jsonifier( # pylint: disable=too-many-arguments
         'value': edge_weight
     }
 
-def lst_2_frq(acc, d):
-    for k, v in {"LHS":"source", "RHS":"target"}.items():
-        acc[k][d[v]] = acc[k].get(d[v], 0) + 1
+def lst_2_frq(acc: Dict[str, Dict[str, int]], d: RowType) -> Dict[str, Dict[str, int]]:
+    """ Converts a list to a dict of frequencies for each half of bipartite graph. """
+    acc["LHS"][d["source"]] = acc["LHS"].get(d["source"], 0) + 1
+    acc["RHS"][d["target"]] = acc["RHS"].get(d["target"], 0) + 1
     return acc
 
 
-def calculate_summary_stats(data):
-    edge_cnt = len(data)
-    nodes = {
+SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
+    "edge_cnt": int,
+    "node_cnts": Dict[str, int],
+    "unique_node_set_size": Dict[str, int],
+    "unique_node_cnts": Dict[str, Dict[str, int]]
+})
+def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
+    """ Calculates summary statistics from raw data. """
+    edge_cnt: int = len(data)
+    nodes: Dict[str, List[str]] = {
         "LHS": [x['source'] for x in data],
         "RHS": [x['target'] for x in data]
     }
-    node_cnts = {k:len(v) for k,v in nodes.items()}
-    unique_nodes = {k:set(v) for k,v in nodes.items()}
-    unique_node_set_size = {k:len(v) for k,v in unique_nodes.items()}
-    unique_node_cnts: Dict[str, Dict[str, int]] = reduce(lst_2_frq, data, {"LHS":{}, "RHS":{}})
+    node_cnts: Dict[str, int] = {k:len(v) for k,v in nodes.items()}
+    unique_nodes: Dict[str, set[str]] = {k:set(v) for k,v in nodes.items()}
+    unique_node_set_size: Dict[str, int] = {k:len(v) for k,v in unique_nodes.items()}
+    unique_node_cnts: Dict[str, Dict[str, int]] = reduce(
+        lst_2_frq,
+        data,
+        {"LHS":{}, "RHS":{}}
+    )
     return {
         "edge_cnt": edge_cnt,
         "node_cnts": node_cnts,
@@ -132,8 +125,16 @@ def calculate_summary_stats(data):
         "unique_node_cnts": unique_node_cnts
     }
 
-def dataJsonifier(raw_data):
-    data = [rowJsonifier(row._asdict()) for row in raw_data]
+ReturnDataType: TypedDict = TypedDict("ReturnDataType", {
+    "data": List[RowType],
+    "summary_stats": SummaryStatsType
+})
+def data_jsonifier(raw_data: List[RawRowType]) -> ReturnDataType:
+    """
+    Applies jsonifier to raw data to organize in consistent format.
+    Also calculates and includes summary stats in this format.
+    """
+    data = [row_jsonifier(row) for row in raw_data]
     summary_stats = calculate_summary_stats(data)
     return {"data":data, "summary_stats":summary_stats}
 
@@ -153,7 +154,8 @@ def serve_environ() -> Response:
                 r._asdict()
                 for r in connection.execute(text(config["MYSQL_JOIN_QUERY"]))
             ]
-            rows: List[RowType] = [row_jsonifier(row) for row in result]
+            data: ReturnDataType = data_jsonifier(result)
+            rows: List[RowType] = data["data"]
             r = Response(response=json.dumps(rows), status=200, mimetype="application/json")
             r.headers.add("Access-Control-Allow-Origin", "*")
     return r
@@ -184,7 +186,7 @@ def serve_custom() -> Response:
     if request.method != "OPTIONS": # preflight
         # customRequest leverages environ file as defaults with options passed in
         # overriding other options defined in structure below
-        request_struct: Config = copy.deepcopy(config)
+        request_struct: Dict[str, str] = copy.deepcopy(config)
         request_struct.update(request.get_json())
         r.set_data("Error with connecting to sql")
         r.status_code = 500
@@ -204,7 +206,8 @@ def serve_custom() -> Response:
                     r._asdict()
                     for r in connection.execute(text(request_struct["MYSQL_JOIN_QUERY"]))
                 ]
-                rows: List[RowType] = [row_jsonifier(row) for row in result]
+                data: ReturnDataType = data_jsonifier(result)
+                rows: List[RowType] = data["data"]
                 r.set_data(json.dumps(rows))
                 r.status_code = 200
                 r.mimetype = "application/json"
