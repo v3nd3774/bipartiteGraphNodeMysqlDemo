@@ -379,8 +379,8 @@ function filterGreaterThan(rows, id, filterValue) {
   });
 }
 
-function isEmpty (obj) {
-  return Object.keys(obj).length === 0
+export function isEmpty (obj) {
+  return (obj === null || obj === undefined) || Object.keys(obj).length === 0
 }
 
 // This is an autoRemove method on the filter function that
@@ -431,11 +431,7 @@ export default function DataTable () {
 
   }
   data={
-    //React.useMemo(
-    //  //() => isEmpty(config.response) ? config.response : makeData(100), []
-    //  () => false ? config.response : makeData(100), []
-    //)
-    ! isEmpty(config.response) ? config.response : makeData(100)
+    ! isEmpty(config.response.data) ? config.response.data : makeData(100)
   } />
   );
 }

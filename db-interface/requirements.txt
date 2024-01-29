@@ -2,3 +2,7 @@ Flask==2.3.2
 SQLAlchemy==2.0.15
 pymysql==1.0.3
 Flask-Caching==2.1.0
+mypy==1.8.0
+mypy-extensions==1.0.0
+ruff==0.1.14
+pylint==3.0.3
