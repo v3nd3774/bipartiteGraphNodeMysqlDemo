@@ -34,17 +34,17 @@ export default function SummaryStats () {
         edgeCnt.selectAll("p").remove();
         edgeCnt
             .append('p')
-            .text(`Total Edges in graph: ${data.edge_cnt}`);
+            .text(`Total Edges: ${data.edge_cnt}`);
         const lhsCntUnique = d3.select("div.lhs-node-set-cnt")
         lhsCntUnique.selectAll("p").remove();
         lhsCntUnique
             .append('p')
-            .text(`Total unique nodes in graph left hand side: ${data.unique_node_set_size.LHS}`);
+            .text(`Total originating nodes (LHS): ${data.unique_node_set_size.LHS}`);
         const rhsCntUnique = d3.select("div.rhs-node-set-cnt")
         rhsCntUnique .selectAll("p").remove();
         rhsCntUnique
             .append('p')
-            .text(`Total unique nodes in graph right hand side: ${data.unique_node_set_size.RHS}`);
+            .text(`Total terminal nodes (RHS): ${data.unique_node_set_size.RHS}`);
 
         // Bar Charts
         // https://stackoverflow.com/a/70536279
