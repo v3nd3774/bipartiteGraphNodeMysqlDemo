@@ -67,18 +67,25 @@ export default function SummaryStats () {
         lhsUniqueCntsSvg.append("text")
             .attr("class", "x label")
             .attr("text-anchor", "end")
-            .attr("x", width * 0.75 )
+            .attr("x", width)
             .attr("y", 18)
             .text("Edge count originating from left hand side")
         var lhsNodes = d3.union(data.unique_node_cnts.LHS.map(d => d.label))
+        //.value(d => d.cnt)
         const lhsStackedData = d3.stack()
             .keys(lhsNodes)
-            .value(d => d.cnt)
-            (data.unique_node_cnts.LHS)
+            .value(([, D], key) => D.get(key).cnt)
+            .order(d3.stackOrderAscending)
+            (d3.index(data.unique_node_cnts.LHS, d => "LHS", d => d.label))
+        //const lhsXMax = d3.max(
+        //    lhsStackedData[lhsStackedData.length - 1],
+        //    d => d[1]
+        //)
         const lhsXMax = d3.max(
-            lhsStackedData[lhsStackedData.length - 1],
-            d => d[1]
+            lhsStackedData,
+            d => d3.max(d, d => d[1])
         )
+        //const lhsXMax = data.edge_cnt
         const lhsX = d3.scaleLinear()
             .domain([0, lhsXMax]).nice()
             .range([0, width])
@@ -88,8 +95,8 @@ export default function SummaryStats () {
             .padding(0.25)
         const lhsColor = d3.scaleOrdinal()
             .domain(lhsNodes)
-            .range(d3.schemeTableau10)
-        const lhsXAxis = d3.axisBottom(lhsX).ticks(5, '~s');
+            .range(d3.schemeSpectral[11])
+        const lhsXAxis = d3.axisBottom(lhsX).ticks(6, '~s');
         const lhsYAxis = d3.axisLeft(lhsY);
         lhsUniqueCntsSvg.append('g')
             .attr('transform', `translate(0,${height})`)
@@ -110,7 +117,7 @@ export default function SummaryStats () {
         lhsLayers.each(function(_, i) {
             d3.select(this)
                 .selectAll('rect')
-                .data(d => d)
+                .data(D => D.map(d => (d.key = D.key, d)))
                 .join('rect')
                     .attr('x', d => lhsX(d[0]))
                     .attr('y', d => lhsY("LHS"))
