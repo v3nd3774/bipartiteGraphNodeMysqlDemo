@@ -239,26 +239,15 @@ export default function Graph () {
       reactData = reactData.data
     }
     console.log("Noise removal to avoid y axis labels on LHS stacking")
-    const getFrequency = (array) => {
-       const map = {};
-       array.forEach(item => {
-          if(map[item.source]){
-             map[item.source]++;
-          }else{
-             map[item.source] = 1;
-          }
-       });
-       return map;
-    };
-    var frequencies = getFrequency(reactData)
+    var frequencies = reactData["summary_stats"]["unique_node_cnts"]["LHS"]
     console.log("freqs")
     console.log(frequencies)
     // purge elements from being rendered that have less than 10 targets
-    reactData = reactData.filter((item) => frequencies[item.source] >= 10)
+    //reactData = reactData.data.filter((item) => frequencies[item.source] >= 10)
     setConfig(updateConfig("response", reactData, config))
     console.log("Storing data")
     console.log(config)
-    drawReact(createLayoutData(reactData, false, config.canvas.viewBox.th, config.canvas.viewBox.f), undefined, reactData)
+    drawReact(createLayoutData(reactData["data"], false, config.canvas.viewBox.th, config.canvas.viewBox.f), undefined, reactData["data"])
   }
 
   useEffect(()=>{

@@ -155,8 +155,7 @@ def serve_environ() -> Response:
                 for r in connection.execute(text(config["MYSQL_JOIN_QUERY"]))
             ]
             data: ReturnDataType = data_jsonifier(result)
-            rows: List[RowType] = data["data"]
-            r = Response(response=json.dumps(rows), status=200, mimetype="application/json")
+            r = Response(response=json.dumps(data), status=200, mimetype="application/json")
             r.headers.add("Access-Control-Allow-Origin", "*")
     return r
 
@@ -207,8 +206,7 @@ def serve_custom() -> Response:
                     for r in connection.execute(text(request_struct["MYSQL_JOIN_QUERY"]))
                 ]
                 data: ReturnDataType = data_jsonifier(result)
-                rows: List[RowType] = data["data"]
-                r.set_data(json.dumps(rows))
+                r.set_data(json.dumps(data))
                 r.status_code = 200
                 r.mimetype = "application/json"
             else:

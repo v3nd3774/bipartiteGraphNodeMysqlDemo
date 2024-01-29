@@ -431,11 +431,7 @@ export default function DataTable () {
 
   }
   data={
-    //React.useMemo(
-    //  //() => isEmpty(config.response) ? config.response : makeData(100), []
-    //  () => false ? config.response : makeData(100), []
-    //)
-    ! isEmpty(config.response) ? config.response : makeData(100)
+    ! isEmpty(config.response.data) ? config.response.data : makeData(100)
   } />
   );
 }
