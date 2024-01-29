@@ -69,7 +69,7 @@ export default function SummaryStats () {
             .attr("text-anchor", "end")
             .attr("x", width)
             .attr("y", 18)
-            .text("Edge count originating from left hand side")
+            .text("Edge count by originating node (LHS)")
         var lhsNodes = d3.union(data.unique_node_cnts.LHS.map(d => d.label))
         //.value(d => d.cnt)
         const lhsStackedData = d3.stack()
@@ -110,7 +110,7 @@ export default function SummaryStats () {
             .data(lhsStackedData)
             .join('g')
             .attr('fill', d => lhsColor(d.key));
-        const duration = 256;
+        const duration = 128;
         const lhsT = d3.transition()
             .duration(duration)
             .ease(d3.easeLinear);
@@ -126,6 +126,165 @@ export default function SummaryStats () {
                     .delay(i * duration)
                     .attr('width', d => lhsX(d[1]) - lhsX(d[0]));
           });
+        // Populate dropdown
+        d3.select("div.lhs-node-unique-cnts-dropdown")
+            .selectAll("select")
+            .remove()
+        d3.select("div.lhs-node-unique-cnts-dropdown")
+            .selectAll("p")
+            .remove()
+        d3.select("div.lhs-node-unique-cnts-dropdown")
+            .append("p")
+            .attr("class", "lhs-unique-percentage")
+        const lhsSorted = Array.from(data.unique_node_cnts.LHS).toSorted(function _(a, b){
+            const aCnt = data.unique_node_cnts.LHS.filter(d => d.label == a.label)[0].cnt
+            const bCnt = data.unique_node_cnts.LHS.filter(d => d.label == b.label)[0].cnt
+            return bCnt - aCnt;
+        })
+        function handleDropDownLhs(e) {
+            console.log(e)
+            const label = lhsSorted[this.selectedIndex].label;
+            const ratio = lhsSorted.filter(d => d.label == label)[0].cnt / data.edge_cnt;
+            d3.select("div.lhs-node-unique-cnts-dropdown")
+                .selectAll("p")
+                .text(`${(ratio * 100).toFixed(2)}%`)
+            d3.select("div.lhs-node-unique-cnts-dropdown")
+                .selectAll("p")
+                .attr("style", `background-color: ${lhsColor(label)};`)
+        }
+        const lhsUniqueCntsDropdown = d3.select("div.lhs-node-unique-cnts-dropdown")
+            .append("select")
+            .attr("class", "selection")
+            .attr("name", "lhs-summary-selector")
+            .on("change", handleDropDownLhs)
+        const lhsOptions = lhsUniqueCntsDropdown.selectAll("option")
+            .data(lhsSorted)
+            .enter()
+            .append("option")
+        lhsOptions
+            .text(d => d.label)
+            .attr(d => d.label)
+        d3.select("div.lhs-node-unique-cnts-dropdown")
+            .selectAll("p")
+            .text(`${(100 * lhsSorted[0].cnt / data.edge_cnt).toFixed(2)}%`)
+        d3.select("div.lhs-node-unique-cnts-dropdown")
+            .selectAll("p")
+            .attr("style", `background-color: ${lhsColor(lhsSorted[0].label)};`)
+
+
+        const rhsUniqueCnts = d3.select("div.rhs-node-unique-cnts")
+        rhsUniqueCnts.selectAll("svg").remove();
+        rhsUniqueCnts.selectAll("rect").remove();
+        rhsUniqueCnts.selectAll("g").remove();
+        rhsUniqueCnts
+            .append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+        const rhsUniqueCntsSvg = d3.select("div.rhs-node-unique-cnts > svg")
+        rhsUniqueCntsSvg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+        rhsUniqueCntsSvg.append("text")
+            .attr("class", "x label")
+            .attr("text-anchor", "end")
+            .attr("x", width)
+            .attr("y", 18)
+            .text("Edge count by terminal node (RHS)")
+        var rhsNodes = d3.union(data.unique_node_cnts.RHS.map(d => d.label))
+        //.value(d => d.cnt)
+        const rhsStackedData = d3.stack()
+            .keys(rhsNodes)
+            .value(([, D], key) => D.get(key).cnt)
+            .order(d3.stackOrderAscending)
+            (d3.index(data.unique_node_cnts.RHS, d => "rhs", d => d.label))
+        const rhsXMax = d3.max(
+            rhsStackedData,
+            d => d3.max(d, d => d[1])
+        )
+        //const rhsXMax = data.edge_cnt
+        const rhsX = d3.scaleLinear()
+            .domain([0, rhsXMax]).nice()
+            .range([0, width])
+        const rhsY = d3.scaleBand()
+            .domain(["rhs"])
+            .range([0, height])
+            .padding(0.25)
+        const rhsColor = d3.scaleOrdinal()
+            .domain(rhsNodes)
+            .range(d3.schemeSpectral[11])
+        const rhsXAxis = d3.axisBottom(rhsX).ticks(6, '~s');
+        const rhsYAxis = d3.axisLeft(rhsY);
+        rhsUniqueCntsSvg.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(rhsXAxis)
+            .call(g => g.select('.domain').remove());
+        rhsUniqueCntsSvg.append("g")
+            .call(rhsYAxis)
+            .call(g => g.select('.domain').remove());
+        const rhsLayers = rhsUniqueCntsSvg.append('g')
+            .selectAll('g')
+            .data(rhsStackedData)
+            .join('g')
+            .attr('fill', d => rhsColor(d.key));
+        const rhsT = d3.transition()
+            .duration(duration)
+            .ease(d3.easeLinear);
+        rhsLayers.each(function(_, i) {
+            d3.select(this)
+                .selectAll('rect')
+                .data(D => D.map(d => (d.key = D.key, d)))
+                .join('rect')
+                    .attr('x', d => rhsX(d[0]))
+                    .attr('y', d => rhsY("rhs"))
+                    .attr('height', rhsY.bandwidth())
+                .transition(rhsT)
+                    .delay(i * duration)
+                    .attr('width', d => rhsX(d[1]) - rhsX(d[0]));
+          });
+        // Populate dropdown
+        d3.select("div.rhs-node-unique-cnts-dropdown")
+            .selectAll("select")
+            .remove()
+        d3.select("div.rhs-node-unique-cnts-dropdown")
+            .selectAll("p")
+            .remove()
+        d3.select("div.rhs-node-unique-cnts-dropdown")
+            .append("p")
+            .attr("class", "rhs-unique-percentage")
+        const rhsSorted = Array.from(data.unique_node_cnts.RHS).toSorted(function _(a, b){
+            const aCnt = data.unique_node_cnts.RHS.filter(d => d.label == a.label)[0].cnt
+            const bCnt = data.unique_node_cnts.RHS.filter(d => d.label == b.label)[0].cnt
+            return bCnt - aCnt;
+        })
+        function handleDropDownRhs(e) {
+            console.log(e)
+            const label = rhsSorted[this.selectedIndex].label;
+            const ratio = rhsSorted.filter(d => d.label == label)[0].cnt / data.edge_cnt;
+            d3.select("div.rhs-node-unique-cnts-dropdown")
+                .selectAll("p")
+                .text(`${(ratio * 100).toFixed(2)}%`)
+            d3.select("div.rhs-node-unique-cnts-dropdown")
+                .selectAll("p")
+                .attr("style", `background-color: ${rhsColor(label)};`)
+        }
+        const rhsUniqueCntsDropdown = d3.select("div.rhs-node-unique-cnts-dropdown")
+            .append("select")
+            .attr("class", "selection")
+            .attr("name", "rhs-summary-selector")
+            .on("change", handleDropDownRhs)
+        const rhsOptions = rhsUniqueCntsDropdown.selectAll("option")
+            .data(rhsSorted)
+            .enter()
+            .append("option")
+        rhsOptions
+            .text(d => d.label)
+            .attr(d => d.label)
+        d3.select("div.rhs-node-unique-cnts-dropdown")
+            .selectAll("p")
+            .text(`${(100 * rhsSorted[0].cnt / data.edge_cnt).toFixed(2)}%`)
+        d3.select("div.rhs-node-unique-cnts-dropdown")
+            .selectAll("p")
+            .attr("style", `background-color: ${rhsColor(rhsSorted[0].label)};`)
     }
 
 
@@ -138,12 +297,15 @@ export default function SummaryStats () {
 
     return (
         <div className="summary-container">
-            <h2>Summary Stats</h2>
             <div className="edge-cnt"> </div>
             <div className="lhs-node-set-cnt"> </div>
             <div className="rhs-node-set-cnt"> </div>
-            <div className="lhs-node-unique-cnts"> </div>
-            <div className="rhs-node-unique-cnts"> </div>
+            <div className="lhs-node-unique-cnts">
+                <div className="lhs-node-unique-cnts-dropdown"> </div>
+            </div>
+            <div className="rhs-node-unique-cnts">
+                <div className="rhs-node-unique-cnts-dropdown"> </div>
+            </div>
         </div>
     )
 }
