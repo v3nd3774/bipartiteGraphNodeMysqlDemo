@@ -25,7 +25,6 @@ function App() {
       <SummaryStats/>
       <DataTable/>
       <GraphConfig/>
-
     </GraphContext.Provider>
   );
 }

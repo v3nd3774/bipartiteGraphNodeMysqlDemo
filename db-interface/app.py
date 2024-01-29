@@ -97,11 +97,14 @@ def lst_2_frq(acc: Dict[str, Dict[str, int]], d: RowType) -> Dict[str, Dict[str,
     return acc
 
 
+UniqueNodeCnt: TypedDict = TypedDict("UniqueNodeCnt",{
+    "label": str,
+    "cnt": int
+})
 SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
     "edge_cnt": int,
-    "node_cnts": Dict[str, int],
     "unique_node_set_size": Dict[str, int],
-    "unique_node_cnts": Dict[str, Dict[str, int]]
+    "unique_node_cnts": Dict[str, Dict[str, List[UniqueNodeCnt]]]
 })
 def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
     """ Calculates summary statistics from raw data. """
@@ -110,17 +113,29 @@ def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
         "LHS": [x['source'] for x in data],
         "RHS": [x['target'] for x in data]
     }
-    node_cnts: Dict[str, int] = {k:len(v) for k,v in nodes.items()}
     unique_nodes: Dict[str, set[str]] = {k:set(v) for k,v in nodes.items()}
     unique_node_set_size: Dict[str, int] = {k:len(v) for k,v in unique_nodes.items()}
-    unique_node_cnts: Dict[str, Dict[str, int]] = reduce(
+    unique_node_cnts_raw: Dict[str, Dict[str, int]] = reduce(
         lst_2_frq,
         data,
         {"LHS":{}, "RHS":{}}
     )
+    unique_node_cnts: Dict[str, UniqueNodeCnt] = {
+        "LHS": [
+           {
+               "label": k,
+               "cnt": v
+           } for k, v in unique_node_cnts_raw["LHS"].items()
+        ],
+        "RHS": [
+            {
+               "label": k,
+               "cnt": v
+           } for k, v in unique_node_cnts_raw["RHS"].items()
+        ]
+    }
     return {
         "edge_cnt": edge_cnt,
-        "node_cnts": node_cnts,
         "unique_node_set_size": unique_node_set_size,
         "unique_node_cnts": unique_node_cnts
     }

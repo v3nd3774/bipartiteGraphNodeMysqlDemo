@@ -379,8 +379,8 @@ function filterGreaterThan(rows, id, filterValue) {
   });
 }
 
-function isEmpty (obj) {
-  return Object.keys(obj).length === 0
+export function isEmpty (obj) {
+  return (obj === null || obj === undefined) || Object.keys(obj).length === 0
 }
 
 // This is an autoRemove method on the filter function that
