@@ -97,7 +97,7 @@ export default function Graph () {
     const container = d3.select("svg").append('g')
        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
     const nodeWidth = 1;
-    console.log(config.sortingConf)
+    //console.log(config.sortingConf)
     let { flows, sources, targets } = createLayoutData(
       rawData,
       false,
@@ -238,15 +238,15 @@ export default function Graph () {
         })
       reactData = reactData.data
     }
-    console.log("Noise removal to avoid y axis labels on LHS stacking")
+    //console.log("Noise removal to avoid y axis labels on LHS stacking")
     var frequencies = reactData["summary_stats"]["unique_node_cnts"]["LHS"]
-    console.log("freqs")
-    console.log(frequencies)
+    //console.log("freqs")
+    //console.log(frequencies)
     // purge elements from being rendered that have less than 10 targets
     //reactData = reactData.data.filter((item) => frequencies[item.source] >= 10)
     setConfig(updateConfig("response", reactData, config))
-    console.log("Storing data")
-    console.log(config)
+    //console.log("Storing data")
+    //console.log(config)
     drawReact(createLayoutData(reactData["data"], false, config.canvas.viewBox.th, config.canvas.viewBox.f), undefined, reactData["data"])
   }
 

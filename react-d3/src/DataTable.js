@@ -1,5 +1,6 @@
 import React, {useContext} from 'react';
 import { GraphContext } from './GraphContext';
+import './DataTable.css';
 
 import {
   useTable,
@@ -11,6 +12,14 @@ import {
 
 import matchSorter from "match-sorter";
 import namor from 'namor'
+
+// encode the legend
+const legend = {
+  "-1": "NFS",
+  "0": "SKIP",
+  "1": "CFS",
+  "-2": "UFS"
+}
 
 // [Modeled after](https://stackoverflow.com/a/69785106)
 // start makeData.js
@@ -28,7 +37,7 @@ function randomDate(start, end) {
 }
 //
 const newPerson = () => {
-  const labels = [-1, 0, 1, 2]
+  const labels = [-1, 0, 1, -2]
   return {
     source: namor.generate({ words: 1, numbers: 0 }),
     content: namor.generate(
@@ -120,6 +129,7 @@ function SelectColumnFilter({
     return [...options.values()];
   }, [id, preFilteredRows]);
 
+
   // Render a multi-select box
   return (
     <select
@@ -130,7 +140,7 @@ function SelectColumnFilter({
     >
       <option value="">All</option>
       {options.map((option, i) => (
-        <option key={i} value={option}>
+        <option key={i} value={option} className={legend[option]}>
           {option}
         </option>
       ))}
@@ -352,7 +362,7 @@ function Table({ columns, data }) {
               <tr {...row.getRowProps()}>
                 {row.cells.map((cell) => {
                   return (
-                    <td {...cell.getCellProps()}>{cell.render("Cell")}</td>
+                    <td {...cell.getCellProps()} className={cell.column.Header != "Label" ? "" : legend[`${cell.value}`]}>{cell.render("Cell")}</td>
                   );
                 })}
               </tr>
@@ -391,6 +401,7 @@ filterGreaterThan.autoRemove = (val) => typeof val !== "number";
 // end App.js
 export default function DataTable () {
   var [config, _] = useContext(GraphContext)
+  console.log(config.data.response)
   return (
     <Table columns={
       React.useMemo(
@@ -407,6 +418,11 @@ export default function DataTable () {
                 Header: "Labeler",
                 accessor: "source",
                 filter: "fuzzyText"
+              },
+              {
+                Header: "StatementId",
+                accessor: "target",
+                filter: "similarText"
               },
               {
                 Header: "Statement",
