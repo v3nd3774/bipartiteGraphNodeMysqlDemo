@@ -142,7 +142,6 @@ export default function SummaryStats () {
             return bCnt - aCnt;
         })
         function handleDropDownLhs(e) {
-            console.log(e)
             const label = lhsSorted[this.selectedIndex].label;
             const ratio = lhsSorted.filter(d => d.label == label)[0].cnt / data.edge_cnt;
             d3.select("div.lhs-node-unique-cnts-dropdown")
@@ -257,7 +256,6 @@ export default function SummaryStats () {
             return bCnt - aCnt;
         })
         function handleDropDownRhs(e) {
-            console.log(e)
             const label = rhsSorted[this.selectedIndex].label;
             const ratio = rhsSorted.filter(d => d.label == label)[0].cnt / data.edge_cnt;
             d3.select("div.rhs-node-unique-cnts-dropdown")

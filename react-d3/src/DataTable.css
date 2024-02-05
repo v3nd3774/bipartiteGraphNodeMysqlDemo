@@ -1,1 +1,22 @@
-/* TBD */
+.NFS {
+    background-color:red;
+    color:white;
+}
+.CFS {
+    background-color:green;
+    color:white;
+}
+.UFS {
+    background-color:purple;
+    color:white;
+}
+.SKIP {
+    background-color:yellow;
+    color:black;
+}
+td.UFS, td.CFS, td.NFS, td.SKIP {
+    text-align:center;
+}
+td, th {
+    border: 1px solid black !important;
+}

@@ -16,11 +16,11 @@ function App() {
       <ViewboxControls/>
       <Graph/>
       <p>
-        With default settings,
-        <span style={{backgroundColor: "red", color: 'white'}}> red </span> is NFS;
-        <span style={{backgroundColor: "purple", color: 'white'}}>purple</span> is UFS,
-        <span style={{backgroundColor: "green", color: 'white'}}>green</span> is CFS and
-        <span style={{backgroundColor: "yellow", color: 'white'}}>yellow</span> is skip
+        With default settings,&nbsp;
+        <span className={"NFS"}> red </span> is NFS;&nbsp;
+        <span className={"UFS"}>purple</span> is UFS,&nbsp;
+        <span className={"CFS"}>green</span> is CFS and &nbsp;
+        <span className={"SKIP"}>yellow</span> is skip
       </p>
       <SummaryStats/>
       <DataTable/>
