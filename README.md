@@ -40,4 +40,3 @@ EOF
 References:
   - https://observablehq.com/@sophietalbot/bipartite-graph-of-virtual-water-trade-wheat/2
   - https://observablehq.com/@snowirbix/work-in-progress
-

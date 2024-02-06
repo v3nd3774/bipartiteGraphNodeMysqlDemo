@@ -290,7 +290,8 @@ export default function SummaryStats () {
       drawSummary()
     }, [
         config.response,
-        config.response.summary_stats
+        config.response.summary_stats,
+        config.filterConf.omitSkip
     ])
 
     return (

@@ -401,7 +401,8 @@ filterGreaterThan.autoRemove = (val) => typeof val !== "number";
 // end App.js
 export default function DataTable () {
   var [config, _] = useContext(GraphContext)
-  console.log(config.data.response)
+  console.log("here")
+  console.log(config.response)
   return (
     <Table columns={
       React.useMemo(

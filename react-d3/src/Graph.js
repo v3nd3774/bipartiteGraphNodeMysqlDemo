@@ -236,18 +236,20 @@ export default function Graph () {
           MYSQL_TIME_COLUMN: config.data.db.timeCol,
           MYSQL_OUTPUT_TIME_FORMAT: config.data.db.timeOutFormat
         })
-      reactData = reactData.data
+      reactData = reactData
     }
     //console.log("Noise removal to avoid y axis labels on LHS stacking")
-    var frequencies = reactData["summary_stats"]["unique_node_cnts"]["LHS"]
+    //var frequencies = reactData["summary_stats"]["unique_node_cnts"]["LHS"]
     //console.log("freqs")
     //console.log(frequencies)
     // purge elements from being rendered that have less than 10 targets
     //reactData = reactData.data.filter((item) => frequencies[item.source] >= 10)
+    const filteredData = config.filterConf.omitSkip ? reactData["data"].filter(d => d.label != 0) : reactData["data"]
+    reactData.data = filteredData;
     setConfig(updateConfig("response", reactData, config))
     //console.log("Storing data")
     //console.log(config)
-    drawReact(createLayoutData(reactData["data"], false, config.canvas.viewBox.th, config.canvas.viewBox.f), undefined, reactData["data"])
+    drawReact(createLayoutData(reactData.data, false, config.canvas.viewBox.th, config.canvas.viewBox.f), undefined, reactData.data)
   }
 
   useEffect(()=>{
@@ -262,7 +264,7 @@ export default function Graph () {
   }, [
     useMemo(
       () => (config.response),
-      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs]
+      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip]
     )
   ])
 
