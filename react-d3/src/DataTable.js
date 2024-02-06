@@ -448,7 +448,7 @@ export default function DataTable () {
 
   }
   data={
-    ! isEmpty(config.response.data) ? config.response.data : makeData(100)
+      ! isEmpty(config.response.data) ? (config.filterConf.omitSkip ? config.response.no_skip_data : config.response.data) : makeData(100)
   } />
   );
 }

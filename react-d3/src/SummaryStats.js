@@ -11,7 +11,7 @@ export default function SummaryStats () {
     var [config, _] = useContext(GraphContext)
 
     function drawSummary() {
-        var data = (! isEmpty(config.response)) && (! isEmpty(config.response.summary_stats)) ? config.response.summary_stats : {
+        var data = (! isEmpty(config.response)) && (! isEmpty(config.response.summary_stats)) ? (config.filterConf.omitSkip ? config.response.no_skip_summary_stats: config.response.summary_stats) : {
             "edge_cnt": 1,
             "unique_node_set_size": {"LHS": 1, "RHS":1},
             "unique_node_cnts": {
@@ -48,9 +48,13 @@ export default function SummaryStats () {
 
         // Bar Charts
         // https://stackoverflow.com/a/70536279
+        // Viewport Details
+        // https://stackoverflow.com/a/8876069
+        let vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
+        let vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
         const margin = { top: 10, right: 10, bottom: 20, left: 40 };
-        const width = 600 - margin.left - margin.right;
-        const height = 200 - margin.top - margin.bottom;
+        const width = vw - margin.left - margin.right;
+        const height = (vh / 4) - margin.top - margin.bottom;
 
         const lhsUniqueCnts = d3.select("div.lhs-node-unique-cnts")
         lhsUniqueCnts.selectAll("svg").remove();

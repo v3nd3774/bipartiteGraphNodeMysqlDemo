@@ -244,12 +244,20 @@ export default function Graph () {
     //console.log(frequencies)
     // purge elements from being rendered that have less than 10 targets
     //reactData = reactData.data.filter((item) => frequencies[item.source] >= 10)
-    const filteredData = config.filterConf.omitSkip ? reactData["data"].filter(d => d.label != 0) : reactData["data"]
-    reactData.data = filteredData;
     setConfig(updateConfig("response", reactData, config))
     //console.log("Storing data")
     //console.log(config)
-    drawReact(createLayoutData(reactData.data, false, config.canvas.viewBox.th, config.canvas.viewBox.f), undefined, reactData.data)
+    const dataForConsideration = config.filterConf.omitSkip ? reactData.no_skip_data : reactData.data
+    drawReact(
+        createLayoutData(
+            dataForConsideration,
+            false,
+            config.canvas.viewBox.th,
+            config.canvas.viewBox.f
+        ),
+        undefined,
+        dataForConsideration
+    )
   }
 
   useEffect(()=>{

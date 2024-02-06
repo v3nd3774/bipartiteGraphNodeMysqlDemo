@@ -15,7 +15,6 @@ div.rhs-node-set-cnt::after{
     white-space: pre;
 }
 div.lhs-node-unique-cnts, div.rhs-node-unique-cnts, div.rhs-node-unique-cnts-dropdown, div.lhs-node-unique-cnts-dropdown {
-    display: inline;
     position:relative;
 }
 div.rhs-node-unique-cnts-dropdown, div.lhs-node-unique-cnts-dropdown {
