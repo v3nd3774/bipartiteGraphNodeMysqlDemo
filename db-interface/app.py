@@ -134,6 +134,7 @@ def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
            } for k, v in unique_node_cnts_raw["RHS"].items()
         ]
     }
+
     return {
         "edge_cnt": edge_cnt,
         "unique_node_set_size": unique_node_set_size,
@@ -142,16 +143,25 @@ def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
 
 ReturnDataType: TypedDict = TypedDict("ReturnDataType", {
     "data": List[RowType],
-    "summary_stats": SummaryStatsType
+    "summary_stats": SummaryStatsType,
+    "no_skip_data": List[RowType],
+    "no_skip_summary_stats": SummaryStatsType
 })
-def data_jsonifier(raw_data: List[RawRowType]) -> ReturnDataType:
+def data_jsonifier(raw_data: List[RawRowType], skip_label = 0) -> ReturnDataType:
     """
     Applies jsonifier to raw data to organize in consistent format.
     Also calculates and includes summary stats in this format.
     """
     data = [row_jsonifier(row) for row in raw_data]
     summary_stats = calculate_summary_stats(data)
-    return {"data":data, "summary_stats":summary_stats}
+    no_skip_data: List[RowType] = [x for x in data if x['label'] != skip_label]
+    no_skip_summary_stats = calculate_summary_stats(no_skip_data)
+    return {
+        "data":data,
+        "summary_stats":summary_stats,
+        "no_skip_data":no_skip_data,
+        "no_skip_summary_stats":no_skip_summary_stats
+    }
 
 
 @app.route("/environ", methods=["GET", "OPTIONS"])
