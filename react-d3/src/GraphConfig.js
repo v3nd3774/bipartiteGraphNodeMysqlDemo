@@ -32,6 +32,8 @@ class GraphConfig extends Component {
     this.updateSort = this.updateSort.bind(this)
     this.updateRhs = this.updateRhs.bind(this)
     this.updateLhs = this.updateLhs.bind(this)
+    this.updateOmitSkipAux = this.updateOmitSkipAux.bind(this)
+    this.updateOmitSkip = this.updateOmitSkip.bind(this)
   }
 
   updateForm(event, k, parent) {
@@ -123,6 +125,21 @@ class GraphConfig extends Component {
   updateRhs(event) {
     this.updateSort(event, "rhs")
   }
+  updateOmitSkipAux(event) {
+    const [config, _] = this.context
+    var newFilterConf = this.updateForm(event, "omitSkip", config.filterConf)
+    config.filterConf = newFilterConf
+    this.setState(config)
+  }
+  updateOmitSkip(event) {
+    this.updateOmitSkipAux(
+      {
+        target: {
+          value: event.target.checked
+        }
+      }
+    )
+  }
 
   render() {
     return (
@@ -131,7 +148,7 @@ class GraphConfig extends Component {
         Submit
       </Button>
 
-      <Form.Group className="col-sm-6" controlId="formLhsSort">
+      <Form.Group className="col-sm-5" controlId="formLhsSort">
         <Form.Label>Sorting for left hand side</Form.Label>
         <Form.Select
           onChange={this.updateLhs}>
@@ -142,7 +159,7 @@ class GraphConfig extends Component {
         </Form.Select>
       </Form.Group>
 
-      <Form.Group className="col-sm-6" controlId="formRhsSort">
+      <Form.Group className="col-sm-5" controlId="formRhsSort">
         <Form.Label>Sorting for right hand side</Form.Label>
         <Form.Select
           onChange={this.updateRhs}>
@@ -151,6 +168,15 @@ class GraphConfig extends Component {
            .map(key => <option value={key}>{key}</option>)
         }
         </Form.Select>
+      </Form.Group>
+
+      <Form.Group className="col-sm-2" controlId="formOmitSkip">
+        <Form.Label>{this.state ? (this.state.filterConf.omitSkip ? "Omit \"skip\"s" : "All data") : "All data"}</Form.Label>
+        <Form.Check
+          type="switch"
+          value={this.state ? (this.state.filterConf.omitSkip) : false}
+          onChange={this.updateOmitSkip}
+        />
       </Form.Group>
 
       <Form.Group className="col-sm-2" controlId="formDb">

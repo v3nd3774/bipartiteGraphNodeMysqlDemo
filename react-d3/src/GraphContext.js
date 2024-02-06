@@ -36,6 +36,9 @@ import {createContext} from 'react';
   sortingConf: {
         lhs: "alphabetical labeler",
         rhs: "numerical id"
+  },
+  filterConf: {
+        omitSkip: false
   }
 }
 export const GraphContext = createContext()
