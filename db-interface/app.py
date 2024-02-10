@@ -6,7 +6,6 @@ import sys
 import copy
 import json
 import datetime
-import mysql.connector
 from functools import reduce
 from typing import Dict, List, TypeAlias, Final
 from typing_extensions import TypedDict
