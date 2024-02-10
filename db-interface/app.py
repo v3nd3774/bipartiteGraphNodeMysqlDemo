@@ -33,7 +33,7 @@ from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter
 )
 
-otlp_endpoint = "localhost:4318"
+otlp_endpoint = "http://localhost:4318"
 otlp_v = "v1"
 provider = TracerProvider()
 processors = [
