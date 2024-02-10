@@ -6,6 +6,7 @@ import sys
 import copy
 import json
 import datetime
+import mysql.connector
 from functools import reduce
 from typing import Dict, List, TypeAlias, Final
 from typing_extensions import TypedDict
@@ -13,8 +14,46 @@ from flask import Response, request, Flask
 from flask_caching import Cache
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
-#from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-#from opentelemetry.instrumentation.flask import FlaskInstrumentor
+
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter
+)
+
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.sdk.metrics.export import (
+    PeriodicExportingMetricReader,
+    ConsoleMetricExporter
+)
+
+otlp_endpoint = "localhost:4318"
+otlp_v = "v1"
+provider = TracerProvider()
+processors = [
+    BatchSpanProcessor(ConsoleSpanExporter()),
+    BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/traces"))
+]
+provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
+# tracer = trace.get_tracer("bipartiteGraphApiInternalTracer")
+
+metric_readers = [
+    PeriodicExportingMetricReader(ConsoleMetricExporter()),
+    PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/metrics"))
+]
+provider = MeterProvider(metric_readers=metric_readers)
+metrics.set_meter_provider(provider)
+# meter = metrics.get_meter("bipartiteGraphApiInternalMetric")
+
+
 
 CONFIG_KEYS: Final[List[str]] = [
     "MYSQL_HOST",
@@ -52,8 +91,9 @@ app: Flask = Flask(__name__)
 app.config.from_mapping(cache_config)
 cache: Cache = Cache(app)
 
-#FlaskInstrumentor().instrument_app(app)
-#FlaskInstrumentor().instrument(enable_commenter=True, commenter_options={})
+FlaskInstrumentor().instrument_app(app)
+FlaskInstrumentor().instrument(enable_commenter=True, commenter_options={})
+
 
 url: str = ":".join([
     "mysql+pymysql",
@@ -63,7 +103,7 @@ url: str = ":".join([
 ])
 
 engine: Engine = create_engine(url)
-#SQLAlchemyInstrumentor().instrument(engine=engine)
+SQLAlchemyInstrumentor().instrument(engine=engine)
 
 RawRowType: TypeAlias = Dict[str, str | int | datetime.datetime]
 RowType: TypedDict = TypedDict("RowType", {
