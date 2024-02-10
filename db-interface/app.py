@@ -13,6 +13,8 @@ from flask import Response, request, Flask
 from flask_caching import Cache
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+#from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+#from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
 CONFIG_KEYS: Final[List[str]] = [
     "MYSQL_HOST",
@@ -46,8 +48,12 @@ cache_config: Cache_Config_Type = {
 }
 
 app: Flask = Flask(__name__)
+
 app.config.from_mapping(cache_config)
 cache: Cache = Cache(app)
+
+#FlaskInstrumentor().instrument_app(app)
+#FlaskInstrumentor().instrument(enable_commenter=True, commenter_options={})
 
 url: str = ":".join([
     "mysql+pymysql",
@@ -57,6 +63,7 @@ url: str = ":".join([
 ])
 
 engine: Engine = create_engine(url)
+#SQLAlchemyInstrumentor().instrument(engine=engine)
 
 RawRowType: TypeAlias = Dict[str, str | int | datetime.datetime]
 RowType: TypedDict = TypedDict("RowType", {
