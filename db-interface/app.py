@@ -14,6 +14,8 @@ from flask_caching import Cache
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
@@ -33,9 +35,13 @@ from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter
 )
 
+resource = Resource(attributes={
+    SERVICE_NAME: "bipartiteGraphApi"
+})
+
 otlp_endpoint = "http://localhost:4318"
 otlp_v = "v1"
-provider = TracerProvider()
+provider = TracerProvider(resource=resource)
 processors = [
     BatchSpanProcessor(ConsoleSpanExporter()),
     BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/traces"))
@@ -49,7 +55,7 @@ metric_readers = [
     PeriodicExportingMetricReader(ConsoleMetricExporter()),
     PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/metrics"))
 ]
-provider = MeterProvider(metric_readers=metric_readers)
+provider = MeterProvider(resource=resource, metric_readers=metric_readers)
 metrics.set_meter_provider(provider)
 # meter = metrics.get_meter("bipartiteGraphApiInternalMetric")
 
