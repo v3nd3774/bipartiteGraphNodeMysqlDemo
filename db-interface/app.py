@@ -40,7 +40,8 @@ processors = [
     BatchSpanProcessor(ConsoleSpanExporter()),
     BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/traces"))
 ]
-provider.add_span_processor(processor)
+for processor in processors:
+    provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
 # tracer = trace.get_tracer("bipartiteGraphApiInternalTracer")
 
