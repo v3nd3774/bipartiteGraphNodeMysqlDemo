@@ -118,7 +118,7 @@ export default function SummaryStats () {
         const lhsT = d3.transition()
             .duration(duration)
             .ease(d3.easeLinear);
-        lhsLayers.each(function(_, i) {
+        lhsLayers.each(function(_, __) {
             d3.select(this)
                 .selectAll('rect')
                 .data(D => D.map(d => (d.key = D.key, d)))
@@ -127,7 +127,7 @@ export default function SummaryStats () {
                     .attr('y', d => lhsY("LHS"))
                     .attr('height', lhsY.bandwidth())
                 .transition(lhsT)
-                    .delay(i * duration)
+                    .delay(duration)
                     .attr('width', d => lhsX(d[1]) - lhsX(d[0]));
           });
         // Populate dropdown
