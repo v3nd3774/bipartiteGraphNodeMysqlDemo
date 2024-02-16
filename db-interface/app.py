@@ -35,29 +35,30 @@ from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter
 )
 
-resource = Resource(attributes={
-    SERVICE_NAME: "bipartiteGraphApi"
-})
+debug_mode: bool = len(sys.argv) > 1 and sys.argv[1] == "debug"
 
-otlp_endpoint = "http://localhost:4318"
-otlp_v = "v1"
-provider = TracerProvider(resource=resource)
-processors = [
-    BatchSpanProcessor(ConsoleSpanExporter()),
-    BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/traces"))
-]
-for processor in processors:
-    provider.add_span_processor(processor)
-trace.set_tracer_provider(provider)
-# tracer = trace.get_tracer("bipartiteGraphApiInternalTracer")
-
-metric_readers = [
-    PeriodicExportingMetricReader(ConsoleMetricExporter()),
-    PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/metrics"))
-]
-provider = MeterProvider(resource=resource, metric_readers=metric_readers)
-metrics.set_meter_provider(provider)
-# meter = metrics.get_meter("bipartiteGraphApiInternalMetric")
+if not debug_mode:
+    resource = Resource(attributes={
+        SERVICE_NAME: "bipartiteGraphApi"
+    })
+    otlp_endpoint = "http://localhost:4318"
+    otlp_v = "v1"
+    provider = TracerProvider(resource=resource)
+    processors = [
+        BatchSpanProcessor(ConsoleSpanExporter()),
+        BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/traces"))
+    ]
+    for processor in processors:
+        provider.add_span_processor(processor)
+    trace.set_tracer_provider(provider)
+    # tracer = trace.get_tracer("bipartiteGraphApiInternalTracer")
+    metric_readers = [
+        PeriodicExportingMetricReader(ConsoleMetricExporter()),
+        PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/metrics"))
+    ]
+    provider = MeterProvider(resource=resource, metric_readers=metric_readers)
+    metrics.set_meter_provider(provider)
+    # meter = metrics.get_meter("bipartiteGraphApiInternalMetric")
 
 
 
@@ -80,7 +81,6 @@ config: Dict[str, str] = {
     x: os.environ[x] for x in CONFIG_KEYS
 }
 
-debug_mode: bool = len(sys.argv) > 1 and sys.argv[1] == "debug"
 Cache_Config_Type = TypedDict("Cache_Config_Type", {
     "CACHE_TYPE": str,
     "CACHE_DEFAULT_TIMEOUT": int,

@@ -7,4 +7,6 @@ mypy-extensions==1.0.0
 ruff==0.1.14
 pylint==3.0.3
 opentelemetry-distro==0.43b0
+opentelemetry-instrumentation-sqlalchemy==0.43b0
 opentelemetry-exporter-otlp==1.22.0
+opentelemetry-instrumentation-flask==0.43b0

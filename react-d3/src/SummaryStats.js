@@ -115,9 +115,6 @@ export default function SummaryStats () {
             .join('g')
             .attr('fill', d => lhsColor(d.key));
         const duration = 128;
-        const lhsT = d3.transition()
-            .duration(duration)
-            .ease(d3.easeLinear);
         lhsLayers.each(function(_, __) {
             d3.select(this)
                 .selectAll('rect')
@@ -126,8 +123,6 @@ export default function SummaryStats () {
                     .attr('x', d => lhsX(d[0]))
                     .attr('y', d => lhsY("LHS"))
                     .attr('height', lhsY.bandwidth())
-                .transition(lhsT)
-                    .delay(duration)
                     .attr('width', d => lhsX(d[1]) - lhsX(d[0]));
           });
         // Populate dropdown
@@ -229,9 +224,6 @@ export default function SummaryStats () {
             .data(rhsStackedData)
             .join('g')
             .attr('fill', d => rhsColor(d.key));
-        const rhsT = d3.transition()
-            .duration(duration)
-            .ease(d3.easeLinear);
         rhsLayers.each(function(_, i) {
             d3.select(this)
                 .selectAll('rect')
@@ -240,8 +232,6 @@ export default function SummaryStats () {
                     .attr('x', d => rhsX(d[0]))
                     .attr('y', d => rhsY("rhs"))
                     .attr('height', rhsY.bandwidth())
-                .transition(rhsT)
-                    .delay(i * duration)
                     .attr('width', d => rhsX(d[1]) - rhsX(d[0]));
           });
         // Populate dropdown
