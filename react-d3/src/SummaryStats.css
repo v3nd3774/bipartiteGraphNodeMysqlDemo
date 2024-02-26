@@ -6,7 +6,7 @@ div.edge-cnt > p, div.lhs-node-cnt > p, div.rhs-node-cnt > p, div.lhs-node-set-c
 div.edge-cnt, div.lhs-node-cnt, div.rhs-node-cnt, div.lhs-node-set-cnt, div.rhs-node-set-cnt {
     display: inline;
 }
-div.edge-cnt::after, div.lhs-node-cnt::after, div.lhs-node-set-cnt::after, div.rhs-node-set-cnt::after {
+div.edge-cnt.activated::after, div.lhs-node-cnt.activated::after, div.lhs-node-set-cnt.activated::after, div.rhs-node-set-cnt.activated::after {
     content: " | ";
 }
 div.rhs-node-set-cnt::after{
