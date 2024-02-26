@@ -1,7 +1,9 @@
+import { renderToString } from 'react-dom/server'
 import React, {useContext, useEffect, useMemo} from 'react';
 import * as d3 from "d3";
 import axios from 'axios';
 import { GraphContext } from './GraphContext';
+import { Loading } from './Loading';
 import { d3Bipartite } from './d3Bipartite';
 import { updateConfig } from './Utility.js';
 import { lhsAvailibleSorting, rhsAvailibleSorting} from './Sorting';
@@ -92,7 +94,18 @@ export default function Graph () {
   }
   function drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
     // clear the svg
+    d3.select("div.container").selectAll("*").remove()
+    d3.select("div.container").append("svg")
+
     const svg = d3.select("svg")
+    svg.attr("viewBox", [
+        config.canvas.viewBox.o,
+        config.canvas.viewBox.tw,
+        config.canvas.viewBox.th,
+        config.canvas.viewBox.f
+      ])
+    svg.attr("width", config.canvas.width)
+    svg.attr("height", config.canvas.height)
     d3.select("svg").selectAll("g").remove();
     const container = d3.select("svg").append('g')
        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
@@ -200,20 +213,22 @@ export default function Graph () {
      tgtlabels
          .on("mouseover", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
          //.on("mouseout", stopDoingSth)
+
+
+    function handleZoom(e) {
+      d3.select('svg g')
+        .attr('transform', e.transform);
+    }
+    let zoom = d3.zoom()
+      .on('zoom', handleZoom)
+    d3.select('svg').call(zoom)
   }
 
   async function drawChart() {
 
-    const svg = d3.select("div.container > svg")
-    svg.selectAll("*").remove()
-    svg.attr("viewBox", [
-        config.canvas.viewBox.o,
-        config.canvas.viewBox.tw,
-        config.canvas.viewBox.th,
-        config.canvas.viewBox.f
-      ])
-    svg.attr("width", config.canvas.width)
-    svg.attr("height", config.canvas.height)
+    d3.select("div.container").selectAll("*").remove()
+    let stringToInject = renderToString(<Loading/>)
+    d3.select("div.container").html(stringToInject)
     var reactData;
     var api_url = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/${config.data.api.endpoint}`
     if(config.data.api.request == "GET") {
@@ -244,6 +259,8 @@ export default function Graph () {
     //console.log(frequencies)
     // purge elements from being rendered that have less than 10 targets
     //reactData = reactData.data.filter((item) => frequencies[item.source] >= 10)
+    const svg = d3.select("div.container > svg")
+    svg.selectAll("*").remove()
     setConfig(updateConfig("response", reactData, config))
     //console.log("Storing data")
     //console.log(config)
@@ -262,13 +279,6 @@ export default function Graph () {
 
   useEffect(()=>{
     drawChart()
-    function handleZoom(e) {
-      d3.select('svg g')
-        .attr('transform', e.transform);
-    }
-    let zoom = d3.zoom()
-      .on('zoom', handleZoom)
-    d3.select('svg').call(zoom)
   }, [
     useMemo(
       () => (config.response),

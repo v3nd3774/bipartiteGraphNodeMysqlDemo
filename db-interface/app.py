@@ -7,7 +7,7 @@ import copy
 import json
 import datetime
 from functools import reduce
-from typing import Dict, List, TypeAlias, Final
+from typing import Dict, List, TypeAlias, Final, Any
 from typing_extensions import TypedDict
 from flask import Response, request, Flask
 from flask_caching import Cache
@@ -35,29 +35,32 @@ from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter
 )
 
-resource = Resource(attributes={
-    SERVICE_NAME: "bipartiteGraphApi"
-})
+debug_mode: bool = len(sys.argv) > 1 and sys.argv[1] == "debug"
 
-otlp_endpoint = "http://localhost:4318"
-otlp_v = "v1"
-provider = TracerProvider(resource=resource)
-processors = [
-    BatchSpanProcessor(ConsoleSpanExporter()),
-    BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/traces"))
-]
-for processor in processors:
-    provider.add_span_processor(processor)
-trace.set_tracer_provider(provider)
-# tracer = trace.get_tracer("bipartiteGraphApiInternalTracer")
-
-metric_readers = [
-    PeriodicExportingMetricReader(ConsoleMetricExporter()),
-    PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{otlp_endpoint}/{otlp_v}/metrics"))
-]
-provider = MeterProvider(resource=resource, metric_readers=metric_readers)
-metrics.set_meter_provider(provider)
-# meter = metrics.get_meter("bipartiteGraphApiInternalMetric")
+if not debug_mode:
+    resource: Resource = Resource(attributes={
+        SERVICE_NAME: "bipartiteGraphApi"
+    })
+    OTLP_ENDPOINT: str = "http://localhost:4318"
+    OTLP_V: str = "v1"
+    tracer_provider = TracerProvider(resource=resource)
+    processors = [
+        BatchSpanProcessor(ConsoleSpanExporter()),
+        BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{OTLP_ENDPOINT}/{OTLP_V}/traces"))
+    ]
+    for processor in processors:
+        tracer_provider.add_span_processor(processor)
+    trace.set_tracer_provider(tracer_provider)
+    # tracer = trace.get_tracer("bipartiteGraphApiInternalTracer")
+    metric_readers: List[PeriodicExportingMetricReader] = [
+        PeriodicExportingMetricReader(ConsoleMetricExporter()),
+        PeriodicExportingMetricReader(OTLPMetricExporter(
+            endpoint=f"{OTLP_ENDPOINT}/{OTLP_V}/metrics"
+        ))
+    ]
+    metric_provider: MeterProvider = MeterProvider(resource=resource, metric_readers=metric_readers)
+    metrics.set_meter_provider(metric_provider)
+    # meter = metrics.get_meter("bipartiteGraphApiInternalMetric")
 
 
 
@@ -80,7 +83,6 @@ config: Dict[str, str] = {
     x: os.environ[x] for x in CONFIG_KEYS
 }
 
-debug_mode: bool = len(sys.argv) > 1 and sys.argv[1] == "debug"
 Cache_Config_Type = TypedDict("Cache_Config_Type", {
     "CACHE_TYPE": str,
     "CACHE_DEFAULT_TIMEOUT": int,
@@ -97,7 +99,7 @@ app: Flask = Flask(__name__)
 app.config.from_mapping(cache_config)
 cache: Cache = Cache(app)
 
-FlaskInstrumentor().instrument_app(app)
+FlaskInstrumentor().instrument_app(app) # type: ignore
 FlaskInstrumentor().instrument(enable_commenter=True, commenter_options={})
 
 
@@ -157,7 +159,7 @@ UniqueNodeCnt: TypedDict = TypedDict("UniqueNodeCnt",{
 SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
     "edge_cnt": int,
     "unique_node_set_size": Dict[str, int],
-    "unique_node_cnts": Dict[str, Dict[str, List[UniqueNodeCnt]]]
+    "unique_node_cnts": Dict[str, List[UniqueNodeCnt]]
 })
 def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
     """ Calculates summary statistics from raw data. """
@@ -173,7 +175,7 @@ def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
         data,
         {"LHS":{}, "RHS":{}}
     )
-    unique_node_cnts: Dict[str, UniqueNodeCnt] = {
+    unique_node_cnts: Dict[str, List[UniqueNodeCnt]] = {
         "LHS": [
            {
                "label": k,
@@ -200,7 +202,7 @@ ReturnDataType: TypedDict = TypedDict("ReturnDataType", {
     "no_skip_data": List[RowType],
     "no_skip_summary_stats": SummaryStatsType
 })
-def data_jsonifier(raw_data: List[RawRowType], skip_label = 0) -> ReturnDataType:
+def data_jsonifier(raw_data: List[RawRowType], skip_label: Any = 0) -> ReturnDataType:
     """
     Applies jsonifier to raw data to organize in consistent format.
     Also calculates and includes summary stats in this format.
