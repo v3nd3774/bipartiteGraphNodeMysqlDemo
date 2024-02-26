@@ -82,9 +82,8 @@ export default function SummaryStats () {
         if (isLoading) {
             lhsUniqueCnts.html(stringToInject)
         } else {
-            lhsUniqueCnts.selectAll("svg").remove();
-            lhsUniqueCnts.selectAll("rect").remove();
-            lhsUniqueCnts.selectAll("g").remove();
+
+            lhsUniqueCnts.html(renderToString(<div className="lhs-node-unique-cnts-dropdown"> </div>))
             lhsUniqueCnts
                 .append('svg')
                     .attr('width', width + margin.left + margin.right)
@@ -200,9 +199,7 @@ export default function SummaryStats () {
         if (isLoading) {
             rhsUniqueCnts.html(stringToInject)
         } else {
-            rhsUniqueCnts.selectAll("svg").remove();
-            rhsUniqueCnts.selectAll("rect").remove();
-            rhsUniqueCnts.selectAll("g").remove();
+            rhsUniqueCnts.html(renderToString(<div className="rhs-node-unique-cnts-dropdown"> </div>))
             rhsUniqueCnts
                 .append('svg')
                     .attr('width', width + margin.left + margin.right)
@@ -324,7 +321,7 @@ export default function SummaryStats () {
             <div className="lhs-node-set-cnt"> </div>
             <div className="rhs-node-set-cnt"> </div>
             <div className="lhs-node-unique-cnts">
-                <div className="lhs-node-unique-cnts-dropdown"> </div>
+
             </div>
             <div className="rhs-node-unique-cnts">
                 <div className="rhs-node-unique-cnts-dropdown"> </div>

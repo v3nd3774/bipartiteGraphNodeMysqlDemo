@@ -1,4 +1,5 @@
 import React, {useContext} from 'react';
+import { Loading } from './Loading';
 import { GraphContext } from './GraphContext';
 import './DataTable.css';
 
@@ -401,53 +402,53 @@ filterGreaterThan.autoRemove = (val) => typeof val !== "number";
 // end App.js
 export default function DataTable () {
   var [config, _] = useContext(GraphContext)
-  console.log("here")
-  console.log(config.response)
-  return (
-    <Table columns={
-      React.useMemo(
-        () => [
-          {
-            Header: "Info",
-            columns: [
-              {
-                Header: "Labeler Quality Score",
-                accessor: "user_quality_score",
-                filter: "fuzzyText"
-              },
-              {
-                Header: "Labeler",
-                accessor: "source",
-                filter: "fuzzyText"
-              },
-              {
-                Header: "StatementId",
-                accessor: "target",
-                filter: "similarText"
-              },
-              {
-                Header: "Statement",
-                accessor: "content",
-                filter: "similarText"
-              },
-              {
-                Header: "Label",
-                accessor: "label",
-                Filter: SelectColumnFilter
-              },
-              {
-                Header: "Time",
-                accessor: "time",
-                filter: "similarText"
-              }
-            ]
-          }
-        ],
-        []
-      )
 
-  }
-  data={
+  let isLoading = isEmpty(config.response.data)
+
+  let columns = React.useMemo(
+    () => [
+      {
+        Header: "Info",
+        columns: [
+          {
+            Header: "Labeler Quality Score",
+            accessor: "user_quality_score",
+            filter: "fuzzyText"
+          },
+          {
+            Header: "Labeler",
+            accessor: "source",
+            filter: "fuzzyText"
+          },
+          {
+            Header: "StatementId",
+            accessor: "target",
+            filter: "similarText"
+          },
+          {
+            Header: "Statement",
+            accessor: "content",
+            filter: "similarText"
+          },
+          {
+            Header: "Label",
+            accessor: "label",
+            Filter: SelectColumnFilter
+          },
+          {
+            Header: "Time",
+            accessor: "time",
+            filter: "similarText"
+          }
+        ]
+      }
+    ],
+    []
+  )
+
+
+  return isLoading ? (<Loading />) : (
+    <Table columns={columns} data={
       ! isEmpty(config.response.data) ? (config.filterConf.omitSkip ? config.response.no_skip_data : config.response.data) : makeData(100)
   } />
   );
