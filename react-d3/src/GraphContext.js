@@ -40,6 +40,6 @@ import {createContext} from 'react';
   filterConf: {
         omitSkip: false,
         timeRanges: []
-  },
+  }
 }
 export const GraphContext = createContext()
