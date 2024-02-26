@@ -38,7 +38,8 @@ import {createContext} from 'react';
         rhs: "numerical id"
   },
   filterConf: {
-        omitSkip: false
-  }
+        omitSkip: false,
+        timeRanges: []
+  },
 }
 export const GraphContext = createContext()
