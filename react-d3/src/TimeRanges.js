@@ -12,7 +12,10 @@ const plusMark = <FontAwesomeIcon icon={faSquarePlus} />
 
 function handleClose(id, config) {
     console.log(`Clicked on close id ${id}`)
-    return config;
+    let newConfig = {}
+    for(var k in config) newConfig[k] = config[k]
+    newConfig.filterConf.timeRanges.splice(id, 1)
+    return newConfig
 }
 function handleNew(_, config) {
     console.log(`Clicked on plus`)
