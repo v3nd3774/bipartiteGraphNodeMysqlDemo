@@ -39,7 +39,9 @@ import {createContext} from 'react';
   },
   filterConf: {
         omitSkip: false,
-        timeRanges: []
+        timeRanges: [
+            ["00:00:00", "23:59:59"]
+        ]
   }
 }
 export const GraphContext = createContext()

@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import './App.css';
+import TimeRanges from './TimeRanges';
 import Graph from './Graph';
 import DataTable from './DataTable';
 import SummaryStats from './SummaryStats';
@@ -25,6 +26,7 @@ function App() {
       <SummaryStats/>
       <DataTable/>
       <GraphConfig/>
+      <TimeRanges/>
     </GraphContext.Provider>
   );
 }
