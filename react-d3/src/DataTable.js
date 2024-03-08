@@ -447,9 +447,29 @@ export default function DataTable () {
   )
 
 
+  const rawData = ! isEmpty(config.response.data) ? (config.filterConf.omitSkip ? config.response.no_skip_data : config.response.data) : makeData(100)
+  const dataForConsideration = rawData.map(function (d) {
+      var out = {}
+      for(var k in d) out[k] = d[k]
+      out['timeParsed'] = new Date(out['time'])
+      return out
+  }).filter(function (d) {
+      return config.filterConf.timeRanges.every(function (range) {
+          const lhs = range[0]
+          const rhs = range[1]
+          function padStart(i) {
+              return i.toString().padStart(2, "0")
+          }
+          const timeStr = [
+              d.timeParsed.getHours(),
+              d.timeParsed.getMinutes(),
+              d.timeParsed.getSeconds()
+          ].map(padStart).join(':')
+          return lhs <= timeStr && rhs >= timeStr
+      })
+  })
+
   return isLoading ? (<Loading />) : (
-    <Table columns={columns} data={
-      ! isEmpty(config.response.data) ? (config.filterConf.omitSkip ? config.response.no_skip_data : config.response.data) : makeData(100)
-  } />
+    <Table columns={columns} data={dataForConsideration} />
   );
 }

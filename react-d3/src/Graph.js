@@ -264,7 +264,36 @@ export default function Graph () {
     setConfig(updateConfig("response", reactData, config))
     //console.log("Storing data")
     //console.log(config)
-    const dataForConsideration = config.filterConf.omitSkip ? reactData.no_skip_data : reactData.data
+
+    function parseTime( t ) {
+       //https://stackoverflow.com/a/141504
+       var d = new Date();
+       var time = t.match( /(\d+)(?::(\d\d))?\s*(p?)/ );
+       d.setHours( parseInt( time[1]) + (time[3] ? 12 : 0) );
+       d.setMinutes( parseInt( time[2]) || 0 );
+       return d;
+    }
+    const rawData = config.filterConf.omitSkip ? reactData.no_skip_data : reactData.data
+    const dataForConsideration = rawData.map(function (d) {
+        var out = {}
+        for(var k in d) out[k] = d[k]
+        out['timeParsed'] = new Date(out['time'])
+        return out
+    }).filter(function (d) {
+        return config.filterConf.timeRanges.every(function (range) {
+            const lhs = range[0]
+            const rhs = range[1]
+            function padStart(i) {
+                return i.toString().padStart(2, "0")
+            }
+            const timeStr = [
+                d.timeParsed.getHours(),
+                d.timeParsed.getMinutes(),
+                d.timeParsed.getSeconds()
+            ].map(padStart).join(':')
+            return lhs <= timeStr && rhs >= timeStr
+        })
+    })
     drawReact(
         createLayoutData(
             dataForConsideration,
@@ -282,7 +311,7 @@ export default function Graph () {
   }, [
     useMemo(
       () => (config.response),
-      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip]
+      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip, config.filterConf.timeRanges]
     )
   ])
 
