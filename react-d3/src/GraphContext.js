@@ -41,6 +41,9 @@ import {createContext} from 'react';
         omitSkip: false,
         timeRanges: [
             ["00:00:00", "23:59:59"]
+        ],
+        datetimeRanges: [
+            [new Date("01/01/1970"), new Date()]
         ]
   }
 }

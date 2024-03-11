@@ -293,6 +293,12 @@ export default function Graph () {
             ].map(padStart).join(':')
             return lhs <= timeStr && rhs >= timeStr
         })
+    }).filter(function (d){
+        return config.filterConf.datetimeRanges.every(function (range) {
+            const lhs = range[0]
+            const rhs = range[1]
+            return lhs <= d.timeParsed && rhs >= d.timeParsed
+        })
     })
     drawReact(
         createLayoutData(

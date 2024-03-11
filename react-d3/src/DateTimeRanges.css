@@ -1,0 +1,22 @@
+.datetime-range-container {
+    display: flex;
+}
+.datetime-range-start-container {
+    display:inline-flex;
+}
+.datetime-range-end-container {
+    display:inline-flex;
+}
+.datetime-range-control-group {
+    display: flex;
+}
+.datetime-range-close, .datetime-range-new {
+    display: inline-flex;
+    margin: 8px;
+}
+.datetime-range-start-text, .datetime-range-end-text {
+    margin: 4px;
+}
+.datetime-ranges-header > h5 {
+    text-align:center;
+}

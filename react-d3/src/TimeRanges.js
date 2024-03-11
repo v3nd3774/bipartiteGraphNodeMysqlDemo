@@ -59,6 +59,9 @@ export default function TimeRanges() {
     }
     let out = (
         <div className={"time-ranges-container"}>
+            <div className={"time-ranges-header"}>
+                <h5>Time filters</h5>
+            </div>
             {generate_time_range(n, 0, updateConfig(0, handleNew), updateConfig(0, handleClose))}
             {generate_time_ranges(n, updateConfig)}
         </div>
