@@ -4,7 +4,7 @@ import './Loading.css';
 
 export function Loading() {
     return (
-        <div class="lds-roller">
+        <div className="lds-roller">
             <div></div>
             <div></div>
             <div></div>

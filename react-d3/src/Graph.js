@@ -1,5 +1,5 @@
 import { renderToString } from 'react-dom/server'
-import React, {useContext, useEffect, useMemo} from 'react';
+import React, {useContext, useState, useEffect, useMemo} from 'react';
 import * as d3 from "d3";
 import axios from 'axios';
 import { GraphContext } from './GraphContext';
@@ -7,12 +7,30 @@ import { Loading } from './Loading';
 import { d3Bipartite } from './d3Bipartite';
 import { updateConfig } from './Utility.js';
 import { lhsAvailibleSorting, rhsAvailibleSorting} from './Sorting';
+import { genTRFilter, genDTRFilter } from './TimeFilters';
+import './Graph.css';
+
+
+function getWindowDimensions() {
+  const { innerWidth: width, innerHeight: height } = window;
+  return { height, width };
+}
 
 export default function Graph () {
 
   var [config, setConfig] = useContext(GraphContext)
+  var { detectedHeight, detectedWidth } = getWindowDimensions();
+  var result;
 
-  function createLayoutData (filteredData, filtered = false, height=1000, width=1000, padding=0) {
+
+  while (typeof detectedHeight === "undefined") {
+     result = getWindowDimensions();
+     detectedHeight = result.height;
+     detectedWidth = result.width;
+  }
+
+
+  function createLayoutData (filteredData, filtered = false, height=detectedHeight, width=detectedWidth, padding=0) {
     const layout = d3Bipartite(
             lhsAvailibleSorting[config.sortingConf.lhs],
             rhsAvailibleSorting[config.sortingConf.rhs]
@@ -97,15 +115,15 @@ export default function Graph () {
     d3.select("div.container").selectAll("*").remove()
     d3.select("div.container").append("svg")
 
-    const svg = d3.select("svg")
+    const svg = d3.select("div.container > svg")
     svg.attr("viewBox", [
         config.canvas.viewBox.o,
         config.canvas.viewBox.tw,
         config.canvas.viewBox.th,
         config.canvas.viewBox.f
       ])
-    svg.attr("width", config.canvas.width)
-    svg.attr("height", config.canvas.height)
+    svg.attr("width", `${detectedWidth}px`)
+    svg.attr("height", `${detectedHeight}px`)
     d3.select("svg").selectAll("g").remove();
     const container = d3.select("svg").append('g')
        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
@@ -264,7 +282,22 @@ export default function Graph () {
     setConfig(updateConfig("response", reactData, config))
     //console.log("Storing data")
     //console.log(config)
-    const dataForConsideration = config.filterConf.omitSkip ? reactData.no_skip_data : reactData.data
+
+    function parseTime( t ) {
+       //https://stackoverflow.com/a/141504
+       var d = new Date();
+       var time = t.match( /(\d+)(?::(\d\d))?\s*(p?)/ );
+       d.setHours( parseInt( time[1]) + (time[3] ? 12 : 0) );
+       d.setMinutes( parseInt( time[2]) || 0 );
+       return d;
+    }
+    const rawData = config.filterConf.omitSkip ? reactData.no_skip_data : reactData.data
+    const dataForConsideration = rawData.map(function (d) {
+        var out = {}
+        for(var k in d) out[k] = d[k]
+        out['timeParsed'] = new Date(out['time'])
+        return out
+    }).filter(genTRFilter(config)).filter(genDTRFilter(config))
     drawReact(
         createLayoutData(
             dataForConsideration,
@@ -282,7 +315,7 @@ export default function Graph () {
   }, [
     useMemo(
       () => (config.response),
-      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip]
+      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip, config.filterConf.timeRanges]
     )
   ])
 

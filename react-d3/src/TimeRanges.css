@@ -1,0 +1,6 @@
+.time-range-close, .time-range-new {
+    display: inline;
+}
+.time-ranges-header > h5 {
+    text-align:center;
+}

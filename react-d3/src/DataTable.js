@@ -2,6 +2,8 @@ import React, {useContext} from 'react';
 import { Loading } from './Loading';
 import { GraphContext } from './GraphContext';
 import './DataTable.css';
+import { genTRFilter, genDTRFilter } from './TimeFilters';
+import { CSVLink } from "react-csv";
 
 import {
   useTable,
@@ -316,10 +318,15 @@ function Table({ columns, data }) {
 
   // We don't want to render all of the rows for this example, so cap
   // it for this use case
-  const firstPageRows = rows.slice(0, 10);
+  const firstPageRows = rows
 
   return (
     <>
+      {/* Export Button Start */}
+      <CSVLink className="downloadbtn" filename="my-data.csv" data={data}>
+        Export to CSV
+      </CSVLink>
+      {/* Export Button End */}
       <table {...getTableProps()}>
         <thead>
           {headerGroups.map((headerGroup) => (
@@ -372,7 +379,6 @@ function Table({ columns, data }) {
         </tbody>
       </table>
       <br />
-      <div>Showing the first 20 results of {rows.length} rows</div>
       <div>
         <pre>
           <code>{JSON.stringify(state.filters, null, 2)}</code>
@@ -447,9 +453,15 @@ export default function DataTable () {
   )
 
 
+  const rawData = ! isEmpty(config.response.data) ? (config.filterConf.omitSkip ? config.response.no_skip_data : config.response.data) : makeData(100)
+  const dataForConsideration = rawData.map(function (d) {
+      var out = {}
+      for(var k in d) out[k] = d[k]
+      out['timeParsed'] = new Date(out['time'])
+      return out
+  }).filter(genTRFilter(config)).filter(genDTRFilter(config))
+
   return isLoading ? (<Loading />) : (
-    <Table columns={columns} data={
-      ! isEmpty(config.response.data) ? (config.filterConf.omitSkip ? config.response.no_skip_data : config.response.data) : makeData(100)
-  } />
+    <Table columns={columns} data={dataForConsideration} />
   );
 }
