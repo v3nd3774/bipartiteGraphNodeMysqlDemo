@@ -24,9 +24,9 @@ export default function Upload({ children }) {
     };
   };
   return (
-    <>
+    <div className='App'>
       <h5>Upload JSON config</h5>
       <input type="file" onChange={handleChange} />
-    </>
+    </div>
   );
 }
