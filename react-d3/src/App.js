@@ -12,6 +12,8 @@ import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
 import Header from './Header'
 import Legend from './Legend'
+import Download from './Download'
+import Upload from './Upload'
 
 function App() {
   const [config, setConfig] = useState(defaults)
@@ -45,6 +47,8 @@ function App() {
           <GraphConfig/>
           <TimeRanges/>
           <DateTimeRanges/>
+          <Download/>
+          <Upload/>
         </TabPanel>
         <TabPanel>
           <About/>

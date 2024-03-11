@@ -3,6 +3,7 @@ import { Loading } from './Loading';
 import { GraphContext } from './GraphContext';
 import './DataTable.css';
 import { genTRFilter, genDTRFilter } from './TimeFilters';
+import { CSVLink } from "react-csv";
 
 import {
   useTable,
@@ -321,6 +322,11 @@ function Table({ columns, data }) {
 
   return (
     <>
+      {/* Export Button Start */}
+      <CSVLink className="downloadbtn" filename="my-data.csv" data={data}>
+        Export to CSV
+      </CSVLink>
+      {/* Export Button End */}
       <table {...getTableProps()}>
         <thead>
           {headerGroups.map((headerGroup) => (
