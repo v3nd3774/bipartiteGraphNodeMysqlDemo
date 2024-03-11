@@ -54,7 +54,7 @@ export default function DateTimeRange(kwargs) {
         }
     }
     let out = (
-        <div className={"datetime-range-container"} time-range-id={id}>
+        <div className={"datetime-range-container"} datetime-range-id={id} key={`datetime-range-${id}`}>
             <div className={"datetime-range-start-container"} >
                 <span className={"datetime-range-start-text"}>Start</span>
                 {generateDatetimePicker(true, updateConfig, id, config)}

@@ -21,7 +21,7 @@ function handleNew(_, config) {
     console.log(`Clicked on plus`)
     let newConfig = {}
     for(var k in config) newConfig[k] = config[k]
-    newConfig.filterConf.timeRanges.push(["00:00:00", "11:59:59"])
+    newConfig.filterConf.timeRanges.push(["00:00:00", "23:59:59"])
     return newConfig
 }
 
@@ -59,8 +59,9 @@ export default function TimeRanges() {
     }
     let out = (
         <div className={"time-ranges-container"}>
-            <div className={"time-ranges-header"}>
+            <div className={"time-ranges-header"} key={"time-ranges-header"}>
                 <h5>Time filters</h5>
+                <p>Data will only be considered if the data was created within all of these time ranges.</p>
             </div>
             {generate_time_range(n, 0, updateConfig(0, handleNew), updateConfig(0, handleClose))}
             {generate_time_ranges(n, updateConfig)}

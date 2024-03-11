@@ -59,8 +59,9 @@ export default function DateTimeRanges() {
     }
     let out = (
         <div className={"datetime-ranges-container"}>
-            <div className={"datetime-ranges-header"}>
+            <div className={"datetime-ranges-header"} key={"datetime-ranges-header"}>
                 <h5>Datetime filters</h5>
+                <p>Data will only be considered if the data was created within all of these Datetime ranges.</p>
             </div>
             {generate_datetime_range(n, 0, updateConfig(0, handleNew), updateConfig(0, handleClose))}
             {generate_datetime_ranges(n, updateConfig)}

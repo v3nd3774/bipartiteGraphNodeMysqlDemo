@@ -2,6 +2,7 @@ import React, {useContext} from 'react';
 import { Loading } from './Loading';
 import { GraphContext } from './GraphContext';
 import './DataTable.css';
+import { genTRFilter, genDTRFilter } from './TimeFilters';
 
 import {
   useTable,
@@ -316,7 +317,7 @@ function Table({ columns, data }) {
 
   // We don't want to render all of the rows for this example, so cap
   // it for this use case
-  const firstPageRows = rows.slice(0, 10);
+  const firstPageRows = rows
 
   return (
     <>
@@ -372,7 +373,6 @@ function Table({ columns, data }) {
         </tbody>
       </table>
       <br />
-      <div>Showing the first 20 results of {rows.length} rows</div>
       <div>
         <pre>
           <code>{JSON.stringify(state.filters, null, 2)}</code>
@@ -453,27 +453,7 @@ export default function DataTable () {
       for(var k in d) out[k] = d[k]
       out['timeParsed'] = new Date(out['time'])
       return out
-  }).filter(function (d) {
-      return config.filterConf.timeRanges.every(function (range) {
-          const lhs = range[0]
-          const rhs = range[1]
-          function padStart(i) {
-              return i.toString().padStart(2, "0")
-          }
-          const timeStr = [
-              d.timeParsed.getHours(),
-              d.timeParsed.getMinutes(),
-              d.timeParsed.getSeconds()
-          ].map(padStart).join(':')
-          return lhs <= timeStr && rhs >= timeStr
-      })
-  }).filter(function (d){
-      return config.filterConf.datetimeRanges.every(function (range) {
-          const lhs = range[0]
-          const rhs = range[1]
-          return lhs <= d.timeParsed && rhs >= d.timeParsed
-      })
-  })
+  }).filter(genTRFilter(config)).filter(genDTRFilter(config))
 
   return isLoading ? (<Loading />) : (
     <Table columns={columns} data={dataForConsideration} />

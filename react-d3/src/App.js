@@ -7,11 +7,11 @@ import DataTable from './DataTable';
 import SummaryStats from './SummaryStats';
 import GraphConfig from './GraphConfig';
 import About from './About';
-import ViewboxControls from './ViewboxControls';
 import { defaults, GraphContext } from './GraphContext';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
 import Header from './Header'
+import Legend from './Legend'
 
 function App() {
   const [config, setConfig] = useState(defaults)
@@ -31,24 +31,18 @@ function App() {
           <Tab>About</Tab>
         </TabList>
         <TabPanel>
+          <Legend/>
           <Graph/>
-          <p>
-            With default settings,&nbsp;
-            <span className={"NFS"}> red </span> is NFS;&nbsp;
-            <span className={"UFS"}>purple</span> is UFS,&nbsp;
-            <span className={"CFS"}>green</span> is CFS and &nbsp;
-            <span className={"SKIP"}>yellow</span> is skip
-          </p>
         </TabPanel>
         <TabPanel>
           <SummaryStats/>
         </TabPanel>
         <TabPanel>
+          <Legend/>
           <DataTable/>
         </TabPanel>
         <TabPanel>
           <GraphConfig/>
-          <ViewboxControls/>
           <TimeRanges/>
           <DateTimeRanges/>
         </TabPanel>

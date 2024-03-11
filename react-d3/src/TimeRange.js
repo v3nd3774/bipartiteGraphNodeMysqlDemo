@@ -61,7 +61,7 @@ export default function TimeRange(kwargs) {
         }
     }
     let out = (
-        <div className={"time-range-container"} time-range-id={id}>
+        <div className={"time-range-container"} time-range-id={id} key={`time-range-${id}`}>
             <div className={"time-range-start-container"} >
                 {generateTimePicker(true, updateConfig, id, config)}
             </div>
