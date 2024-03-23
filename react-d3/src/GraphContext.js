@@ -38,7 +38,7 @@ import {createContext} from 'react';
         rhs: "numerical id"
   },
   filterConf: {
-        omitSkip: false,
+        omitSkip: true,
         timeRanges: [
             ["00:00:00", "23:59:59"]
         ],
