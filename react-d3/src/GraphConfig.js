@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
-import { GraphContext } from './GraphContext';
+import { defaults, GraphContext } from './GraphContext';
 import { updateConfig } from './Utility.js';
 import { lhsAvailibleSorting, rhsAvailibleSorting } from './Sorting.js';
 
@@ -34,6 +34,37 @@ class GraphConfig extends Component {
     this.updateLhs = this.updateLhs.bind(this)
     this.updateOmitSkipAux = this.updateOmitSkipAux.bind(this)
     this.updateOmitSkip = this.updateOmitSkip.bind(this)
+    this.determineWhichCheckboxToUse = this.determineWhichCheckboxToUse.bind(this)
+  }
+
+  determineWhichCheckboxToUse() {
+    const isStatePopulated = Boolean(this.state)
+    var out = (
+      <Form.Check
+        type="switch"
+        value={defaults.filterConf.omitSkip}
+        onChange={this.updateOmitSkip}
+        checked
+      />
+    )
+    if (isStatePopulated) {
+      const isSkipSwitchChecked = Boolean(this.state.filterConf.omitSkip)
+      if (isSkipSwitchChecked) {
+        out = (<Form.Check
+          type="switch"
+          value={this.state.filterConf.omitSkip}
+          onChange={this.updateOmitSkip}
+          checked
+        />)
+      } else {
+        out = (<Form.Check
+          type="switch"
+          value={this.state.filterConf.omitSkip}
+          onChange={this.updateOmitSkip}
+        />)
+      }
+    }
+    return out
   }
 
   updateForm(event, k, parent) {
@@ -171,12 +202,15 @@ class GraphConfig extends Component {
       </Form.Group>
 
       <Form.Group className="col-sm-2" controlId="formOmitSkip">
-        <Form.Label>{this.state ? (this.state.filterConf.omitSkip ? "Omit \"skip\"s" : "All data") : "All data"}</Form.Label>
-        <Form.Check
-          type="switch"
-          value={this.state ? (this.state.filterConf.omitSkip) : false}
-          onChange={this.updateOmitSkip}
-        />
+        <Form.Label>
+            {this.state ?
+                (this.state.filterConf.omitSkip ?
+                    "Omit \"skip\"s" :
+                    "All data") :
+                "Omit \"skip\"s"
+            }
+        </Form.Label>
+        {this.determineWhichCheckboxToUse()}
       </Form.Group>
 
       <Form.Group className="col-sm-2" controlId="formDb">
