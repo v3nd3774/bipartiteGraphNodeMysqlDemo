@@ -76,6 +76,23 @@ export default function Graph () {
          0.5
        )
   }
+  function stopDoSthTgt (g, i, els, rawData, svg) {
+     const all = d3.select("svg").selectAll("g path")
+       all
+       .transition()
+       .style("stroke", d =>
+             d.original.label == -1 ? "red" :
+             d.original.label == -2 ? "purple" :
+             d.original.label ==  1 ? "green" :
+               "yellow" // zero here
+       )
+       .style("stroke-width", d =>
+         1.01010101010101010102
+       )
+       .style("opacity", _ =>
+         0.5
+       )
+  }
   function doSthTgt (g, i, els, rawData, svg) {
      const all = d3.select("svg").selectAll("g path")
        all
@@ -198,9 +215,10 @@ export default function Graph () {
       .attr('color', 'black')
       .text(d => d.key)
     srclabels
-      .on("mouseover", (i, g, els) =>
+      .on("mouseenter", (i, g, els) =>
         doSth(i, g, els, rawData, svg)
       )
+      .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
       .on("click", (g, i, els) => {
         drawReact(layoutData, filterKey, rawData, margin)
       })
@@ -229,8 +247,8 @@ export default function Graph () {
             return d.key
           });
      tgtlabels
-         .on("mouseover", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
-         //.on("mouseout", stopDoingSth)
+         .on("mouseenter", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
+         .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
 
 
     function handleZoom(e) {
@@ -238,8 +256,11 @@ export default function Graph () {
         .attr('transform', e.transform);
     }
     let zoom = d3.zoom()
+      .scaleExtent([1, 5])
       .on('zoom', handleZoom)
-    d3.select('svg').call(zoom)
+
+    d3.select('svg')
+        .call(zoom)
   }
 
   async function drawChart() {
