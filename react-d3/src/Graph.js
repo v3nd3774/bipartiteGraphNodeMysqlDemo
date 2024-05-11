@@ -10,6 +10,11 @@ import { lhsAvailibleSorting, rhsAvailibleSorting} from './Sorting';
 import { genTRFilter, genDTRFilter } from './TimeFilters';
 import './Graph.css';
 
+// http://www.d3noob.org/2013/01/using-multiple-axes-for-d3js-graph.html
+// https://github.com/ilyabo/d3-bipartite/blob/master/src/index.js#L46
+// will need to create module to perform the zoom shown below with above resources totally redo viz
+// https://observablehq.com/@d3/zoomable-area-chart?collection=@d3/d3-zoom
+// above example has static y axis; will need this to be a static x axis with y axis being the zoomable part
 
 function getWindowDimensions() {
   const { innerWidth: width, innerHeight: height } = window;
