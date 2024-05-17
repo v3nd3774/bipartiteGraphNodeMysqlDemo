@@ -159,7 +159,7 @@ export default function Graph () {
       config.canvas.padding
     );
     // flow lines
-    container.append('g')
+    let lines = container.append('g')
       .selectAll('path')
       .data(flows)
       .enter().append('path')
@@ -174,7 +174,7 @@ export default function Graph () {
       )
           .attr('stroke-width', d => d.thickness);
     // source node rectangles
-    container.append('g')
+    let source_nodes = container.append('g')
       .selectAll('rect')
       .data(flows)
       .enter().append('rect')
@@ -190,7 +190,7 @@ export default function Graph () {
       )
       .attr('stroke', 'none');
     // target node rectangles
-    container.append('g')
+    let target_nodes = container.append('g')
       .selectAll('rect')
       .data(flows)
       .enter().append('rect')
@@ -214,7 +214,7 @@ export default function Graph () {
       .attr('x', d => d.x - 15)
       .attr('y', d => d.y + d.height/2)
       .attr('font-family', 'arial')
-      .attr('font-size', 10)
+      .attr('font-size', 20)
       .attr('alignment-baseline', 'middle')
       .attr('text-anchor', 'middle')
       .attr('color', 'black')
@@ -244,7 +244,7 @@ export default function Graph () {
       .attr('x', d => d.x)
       .attr('y', d => d.y + d.height/2)
           .attr('font-family', 'arial')
-          .attr('font-size', 12)
+          .attr('font-size', 20)
           .attr('alignment-baseline', 'middle')
           .attr('text-anchor', 'middle')
           .attr('color', 'black')
@@ -257,8 +257,23 @@ export default function Graph () {
 
 
     function handleZoom(e) {
-      d3.select('svg g')
-        .attr('transform', e.transform);
+      const eventType = e.sourceEvent.type;
+      let cont = d3.select('svg g')
+      let old_transform = cont.attr('transform');
+      let old_scale = 1
+      if (old_transform.includes('scale')) {
+        old_scale = parseFloat(old_transform.split(' ')[1].split(',')[0]);
+      }
+      if (eventType !== 'wheel') {
+        e.transform.k = old_scale
+      } else {
+        srclabels
+            .attr("transform", `scale(${e.transform.k}, 1)`);
+      }
+      tgtlabels
+          .attr("transform", d => `scale(${e.transform.k}, 1) translate(${e.transform.x}, 0)`);
+      cont
+          .attr("transform", `scale(1, ${e.transform.k}) translate(0, ${e.transform.y})`);
     }
     let zoom = d3.zoom()
       .scaleExtent([1, 5])
