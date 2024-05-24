@@ -333,9 +333,32 @@ export default function Graph () {
         srclabels
             .attr("transform", `scale(${e.transform.k}, 1)`);
       }
+      function scaleAndMaintainOffset(domElement, _, __) {
+       let old_transform = domElement.getAttribute("transform")
+
+       if (!(old_transform == null || old_transform == "" || typeof old_transform == "undefined")) {
+         console.log("prev_transform" + old_transform)
+         let prev_transform_dict = old_transform.split(/[^,] [^,]/).reduce((acc, setting) => {
+                let name = setting.split('(')[0]
+                let value = setting.split('(')[1].slice(0,-1)
+                let values = value.split(',')
+                acc[name] = values.map(parseFloat)
+                return acc
+            }, {})
+                    // WORKING HERE
+         console.log("prev_transform_parsed" + prev_transform_dict)
+       }
+
+       let transform_str = `scale(${e.transform.k}, 1)`
+
+       d3.select(domElement).attr("transform", transform_str);
+      }
+
       tgtlabels
         .attr('x', d => last_x_int / e.transform.k)
-        .attr("transform", d => `scale(${e.transform.k}, 1)`);
+
+      tgtlabels._groups[0].forEach(scaleAndMaintainOffset)
+
       cont
           .attr("transform", `scale(1, ${e.transform.k}) translate(0, ${e.transform.y})`);
     }
