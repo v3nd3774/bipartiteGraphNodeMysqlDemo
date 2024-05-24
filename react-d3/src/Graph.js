@@ -35,14 +35,19 @@ export default function Graph () {
   }
 
 
-  function createLayoutData (filteredData, filtered = false, height=detectedHeight, width=detectedWidth, padding=0) {
+  function createLayoutData (filteredData, summary_data, filtered = false, height=detectedHeight * 2, width=detectedWidth * .85, padding=config.canvas.padding) {
+    function onlyUnique(value, index, array) {
+      return array.indexOf(value) === index;
+    }
+    let edge_cnt = summary_data.edge_cnt
+    let padding_value = height / (edge_cnt * .5)
     const layout = d3Bipartite(
             lhsAvailibleSorting[config.sortingConf.lhs],
             rhsAvailibleSorting[config.sortingConf.rhs]
     )
       .width(width)
       .height(height)
-      .padding(padding)
+      .padding(padding_value)
       .source(d => d.source)
       .target(d => d.target)
       .value(d => d.value);
@@ -132,17 +137,21 @@ export default function Graph () {
          0.5
        )
   }
-  function drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
+  function drawReact(layoutData, filterKey, rawData, summaryData, margin = {left: 0, right: 0}) {
     // clear the svg
     d3.select("div.container").selectAll("*").remove()
     d3.select("div.container").append("svg")
 
     const svg = d3.select("div.container > svg")
+    let min_x = Math.min(...layoutData.flows.map(d => d.start.x)) - 15
+    let min_y = Math.min(...layoutData.flows.map(d => d.end.y)) - 15
+    let max_x = Math.max(...layoutData.flows.map(d => d.end.x)) + 15
+    let max_y = Math.max(...layoutData.flows.map(d => d.end.y)) + 15
     svg.attr("viewBox", [
-        config.canvas.viewBox.o,
-        config.canvas.viewBox.tw,
-        config.canvas.viewBox.th,
-        config.canvas.viewBox.f
+        min_x,
+        min_y,
+        min_x + max_x,
+        min_y + max_y
       ])
     svg.attr("width", `${detectedWidth}px`)
     svg.attr("height", `${detectedHeight}px`)
@@ -153,10 +162,8 @@ export default function Graph () {
     //console.log(config.sortingConf)
     let { flows, sources, targets } = createLayoutData(
       rawData,
-      false,
-      config.canvas.viewBox.th,
-      config.canvas.viewBox.f,
-      config.canvas.padding
+      summaryData,
+      false
     );
     // flow lines
     let lines = container.append('g')
@@ -225,14 +232,14 @@ export default function Graph () {
       )
       .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
       .on("click", (g, i, els) => {
-        drawReact(layoutData, filterKey, rawData, margin)
+        drawReact(layoutData, filterKey, rawData, summaryData, margin)
       })
     d3.select("svg")
       .on("mouseleave", () => {
         // if there was a filter, remove it
         if (filterKey != undefined)
         {
-          drawReact(layoutData)
+          drawReact(layoutData, filterKey, rawData, summaryData, margin)
         }
       })
     // target labels
@@ -240,6 +247,7 @@ export default function Graph () {
       .selectAll('text')
       .data(targets)
       .enter().append('text')
+
     tgtlabels
       .attr('x', d => d.x)
       .attr('y', d => d.y + d.height/2)
@@ -255,6 +263,61 @@ export default function Graph () {
          .on("mouseenter", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
          .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
 
+     function fixLabels(labels, left = true) {
+        var prevs = [];
+        var iterations = 20
+        var done = false
+        while (!done) {
+            prevs = [];
+            done = true
+            iterations -= 1
+            if (iterations == 0) {
+                break
+            }
+            labels.each(function(d, i) {
+              let comparison_obj = this
+              prevs.forEach(function(prev) {
+                if(i > 0) {
+                  var thisbb = comparison_obj.getBoundingClientRect();
+                  var prevbb = prev.getBoundingClientRect();
+                  // move if they overlap
+                  let overlap = !(thisbb.right < prevbb.left ||
+                          thisbb.left > prevbb.right ||
+                          thisbb.bottom < prevbb.top ||
+                          thisbb.top > prevbb.bottom)
+                  if(overlap) {
+                      done = false
+                      let selection = d3.select(comparison_obj)
+                      var prev_value = 0
+                      var prev_transform = selection._groups[0][0].getAttribute("transform")
+                      if (!(prev_transform == null || prev_transform == "" || typeof prev_transform == "undefined")) {
+                          prev_value = parseFloat(
+                            selection._groups[0][0].getAttribute("transform").split(",")[0].split("(")[1]
+                          )
+                      }
+                      if (!left) {
+                        let translate_value = prev_value + (prevbb.width + thisbb.width) * 1.25
+                        selection.attr("transform",
+                            "translate(" + translate_value + ", 0)");
+                      } else {
+                        let translate_value = prev_value + (-1 * ((prevbb.width + thisbb.width) * 1.25))
+                        selection.attr("transform",
+                            "translate(" + translate_value + ", 0)");
+                      }
+                    }
+                }
+              })
+              prevs.push(comparison_obj)
+            });
+        }
+    }
+    fixLabels(srclabels)
+    fixLabels(tgtlabels, false)
+
+    let path_str = lines._groups[0][0].getAttribute("d")
+    let path_parts = path_str.split(' ')
+    let last_x = path_parts[2].split(',')[0]
+    let last_x_int = parseInt(last_x)
 
     function handleZoom(e) {
       const eventType = e.sourceEvent.type;
@@ -271,12 +334,13 @@ export default function Graph () {
             .attr("transform", `scale(${e.transform.k}, 1)`);
       }
       tgtlabels
-          .attr("transform", d => `scale(${e.transform.k}, 1) translate(${e.transform.x}, 0)`);
+        .attr('x', d => last_x_int / e.transform.k)
+        .attr("transform", d => `scale(${e.transform.k}, 1)`);
       cont
           .attr("transform", `scale(1, ${e.transform.k}) translate(0, ${e.transform.y})`);
     }
     let zoom = d3.zoom()
-      .scaleExtent([1, 5])
+      .scaleExtent([0.1, 5])
       .on('zoom', handleZoom)
 
     d3.select('svg')
@@ -339,15 +403,16 @@ export default function Graph () {
         out['timeParsed'] = new Date(out['time'])
         return out
     }).filter(genTRFilter(config)).filter(genDTRFilter(config))
+    const summaryData = config.filterConf.omitSkip ? reactData.no_skip_summary_stats : reactData.summary_stats
     drawReact(
         createLayoutData(
             dataForConsideration,
-            false,
-            config.canvas.viewBox.th,
-            config.canvas.viewBox.f
+            summaryData,
+            false
         ),
         undefined,
-        dataForConsideration
+        dataForConsideration,
+        summaryData
     )
   }
 

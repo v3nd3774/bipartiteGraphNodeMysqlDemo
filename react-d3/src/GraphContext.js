@@ -3,7 +3,7 @@ import {createContext} from 'react';
   canvas: {
     height: 4500,
     width: 4000,
-    padding: 0,
+    padding: 20,
     viewBox: {
       o: (-2000 / 30),
       tw: 500,
