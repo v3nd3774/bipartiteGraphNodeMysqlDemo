@@ -10,6 +10,11 @@ import { lhsAvailibleSorting, rhsAvailibleSorting} from './Sorting';
 import { genTRFilter, genDTRFilter } from './TimeFilters';
 import './Graph.css';
 
+// http://www.d3noob.org/2013/01/using-multiple-axes-for-d3js-graph.html
+// https://github.com/ilyabo/d3-bipartite/blob/master/src/index.js#L46
+// will need to create module to perform the zoom shown below with above resources totally redo viz
+// https://observablehq.com/@d3/zoomable-area-chart?collection=@d3/d3-zoom
+// above example has static y axis; will need this to be a static x axis with y axis being the zoomable part
 
 function getWindowDimensions() {
   const { innerWidth: width, innerHeight: height } = window;
@@ -30,14 +35,22 @@ export default function Graph () {
   }
 
 
-  function createLayoutData (filteredData, filtered = false, height=detectedHeight, width=detectedWidth, padding=0) {
+  function createLayoutData (filteredData, summary_data, filtered = false, rawHeight=detectedHeight * 2, width=detectedWidth * 1.5, padding=config.canvas.padding) {
+    function onlyUnique(value, index, array) {
+      return array.indexOf(value) === index;
+    }
+    let edge_cnt = summary_data.edge_cnt
+    let gamma = Math.log(edge_cnt + 1) / 2
+    let height = rawHeight * gamma
+    let theta = (1 + (1 / Math.log(edge_cnt)) - 1/2) / (Math.E - .832)
+    let padding_value = height / (edge_cnt * theta)
     const layout = d3Bipartite(
             lhsAvailibleSorting[config.sortingConf.lhs],
             rhsAvailibleSorting[config.sortingConf.rhs]
     )
-      .width(width)
+      .width(width * (gamma + 1))
       .height(height)
-      .padding(padding)
+      .padding(padding_value)
       .source(d => d.source)
       .target(d => d.target)
       .value(d => d.value);
@@ -62,6 +75,23 @@ export default function Graph () {
        .filter(d => {
          return d.source == i.key
        })
+       .transition()
+       .style("stroke", d =>
+             d.original.label == -1 ? "red" :
+             d.original.label == -2 ? "purple" :
+             d.original.label ==  1 ? "green" :
+               "yellow" // zero here
+       )
+       .style("stroke-width", d =>
+         1.01010101010101010102
+       )
+       .style("opacity", _ =>
+         0.5
+       )
+  }
+  function stopDoSthTgt (g, i, els, rawData, svg) {
+     const all = d3.select("svg").selectAll("g path")
+       all
        .transition()
        .style("stroke", d =>
              d.original.label == -1 ? "red" :
@@ -110,17 +140,21 @@ export default function Graph () {
          0.5
        )
   }
-  function drawReact(layoutData, filterKey, rawData, margin = {left: 0, right: 0}) {
+  function drawReact(layoutData, filterKey, rawData, summaryData, margin = {left: 0, right: 0}) {
     // clear the svg
     d3.select("div.container").selectAll("*").remove()
     d3.select("div.container").append("svg")
 
     const svg = d3.select("div.container > svg")
+    let min_x = Math.min(...layoutData.flows.map(d => d.start.x)) - 15
+    let min_y = Math.min(...layoutData.flows.map(d => d.end.y)) - 15
+    let max_x = Math.max(...layoutData.flows.map(d => d.end.x)) + 15
+    let max_y = Math.max(...layoutData.flows.map(d => d.end.y)) + 15
     svg.attr("viewBox", [
-        config.canvas.viewBox.o,
-        config.canvas.viewBox.tw,
-        config.canvas.viewBox.th,
-        config.canvas.viewBox.f
+        min_x,
+        min_y,
+        min_x + max_x,
+        min_y + max_y
       ])
     svg.attr("width", `${detectedWidth}px`)
     svg.attr("height", `${detectedHeight}px`)
@@ -131,13 +165,11 @@ export default function Graph () {
     //console.log(config.sortingConf)
     let { flows, sources, targets } = createLayoutData(
       rawData,
-      false,
-      config.canvas.viewBox.th,
-      config.canvas.viewBox.f,
-      config.canvas.padding
+      summaryData,
+      false
     );
     // flow lines
-    container.append('g')
+    let lines = container.append('g')
       .selectAll('path')
       .data(flows)
       .enter().append('path')
@@ -152,7 +184,7 @@ export default function Graph () {
       )
           .attr('stroke-width', d => d.thickness);
     // source node rectangles
-    container.append('g')
+    let source_nodes = container.append('g')
       .selectAll('rect')
       .data(flows)
       .enter().append('rect')
@@ -168,7 +200,7 @@ export default function Graph () {
       )
       .attr('stroke', 'none');
     // target node rectangles
-    container.append('g')
+    let target_nodes = container.append('g')
       .selectAll('rect')
       .data(flows)
       .enter().append('rect')
@@ -192,24 +224,25 @@ export default function Graph () {
       .attr('x', d => d.x - 15)
       .attr('y', d => d.y + d.height/2)
       .attr('font-family', 'arial')
-      .attr('font-size', 10)
+      .attr('font-size', 20)
       .attr('alignment-baseline', 'middle')
       .attr('text-anchor', 'middle')
       .attr('color', 'black')
       .text(d => d.key)
     srclabels
-      .on("mouseover", (i, g, els) =>
+      .on("mouseenter", (i, g, els) =>
         doSth(i, g, els, rawData, svg)
       )
+      .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
       .on("click", (g, i, els) => {
-        drawReact(layoutData, filterKey, rawData, margin)
+        drawReact(layoutData, filterKey, rawData, summaryData, margin)
       })
     d3.select("svg")
       .on("mouseleave", () => {
         // if there was a filter, remove it
         if (filterKey != undefined)
         {
-          drawReact(layoutData)
+          drawReact(layoutData, filterKey, rawData, summaryData, margin)
         }
       })
     // target labels
@@ -217,11 +250,12 @@ export default function Graph () {
       .selectAll('text')
       .data(targets)
       .enter().append('text')
+
     tgtlabels
       .attr('x', d => d.x)
       .attr('y', d => d.y + d.height/2)
           .attr('font-family', 'arial')
-          .attr('font-size', 12)
+          .attr('font-size', 20)
           .attr('alignment-baseline', 'middle')
           .attr('text-anchor', 'middle')
           .attr('color', 'black')
@@ -229,17 +263,81 @@ export default function Graph () {
             return d.key
           });
      tgtlabels
-         .on("mouseover", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
-         //.on("mouseout", stopDoingSth)
+         .on("mouseenter", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
+         .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
 
+
+    let path_str = lines._groups[0][0].getAttribute("d")
+    let path_parts = path_str.split(' ')
+    let last_x = path_parts[2].split(',')[0]
+    let last_x_int = parseInt(last_x)
 
     function handleZoom(e) {
-      d3.select('svg g')
-        .attr('transform', e.transform);
+      const eventType = e.sourceEvent.type;
+      let cont = d3.select('svg g')
+      let old_transform = cont.attr('transform');
+      let old_scale = 1
+      if (old_transform.includes('scale')) {
+        old_scale = parseFloat(old_transform.split(' ')[1].split(',')[0]);
+      }
+      if (eventType !== 'wheel') {
+        e.transform.k = old_scale
+      }
+      function scaleAndMaintainOffset(domElement, _, __) {
+       let old_transform = domElement.getAttribute("transform")
+
+       let new_transform_to_apply_dict = {
+        'scale': [e.transform.k, 1],
+       }
+
+       let merged_transform_dict = {}
+
+       if (!(old_transform == null || old_transform == "" || typeof old_transform == "undefined")) {
+         console.log("prev_transform" + old_transform)
+         let prev_transform_dict = old_transform.split(/[^,] [^,]/).reduce((acc, setting) => {
+                let name = setting.split('(')[0]
+                let value = setting.split('(')[1].slice(0,-1)
+                let values = value.split(',')
+                acc[name] = values.map(parseFloat)
+                return acc
+            }, {})
+         console.log("prev_transform_parsed" + prev_transform_dict)
+         merged_transform_dict = Object.assign(merged_transform_dict, prev_transform_dict)
+       }
+
+       merged_transform_dict = Object.assign(merged_transform_dict, new_transform_to_apply_dict)
+
+       if ('scale' in merged_transform_dict && 'translate' in merged_transform_dict) {
+            let scale = merged_transform_dict['scale']
+            let translate = merged_transform_dict['translate']
+            let original_translate = parseFloat(d3.select(domElement).attr("data-original-translate-x"))
+            translate[0] = original_translate
+            let new_translate = translate.map((val, idx) => val * scale[idx])
+            merged_transform_dict['translate'] = new_translate
+       }
+
+       let transform_str = Object.entries(merged_transform_dict).map(([name, values]) => {
+            return `${name}(${values.join(',')})`
+        }).join(' ')
+
+       d3.select(domElement).attr("transform", transform_str);
+      }
+
+      tgtlabels
+        .attr('x', d => last_x_int / e.transform.k)
+
+      srclabels._groups[0].forEach(scaleAndMaintainOffset)
+      tgtlabels._groups[0].forEach(scaleAndMaintainOffset)
+
+      cont
+          .attr("transform", `scale(1, ${e.transform.k}) translate(0, ${e.transform.y})`);
     }
     let zoom = d3.zoom()
+      .scaleExtent([0.1, 5])
       .on('zoom', handleZoom)
-    d3.select('svg').call(zoom)
+
+    d3.select('svg')
+        .call(zoom)
   }
 
   async function drawChart() {
@@ -298,15 +396,16 @@ export default function Graph () {
         out['timeParsed'] = new Date(out['time'])
         return out
     }).filter(genTRFilter(config)).filter(genDTRFilter(config))
+    const summaryData = config.filterConf.omitSkip ? reactData.no_skip_summary_stats : reactData.summary_stats
     drawReact(
         createLayoutData(
             dataForConsideration,
-            false,
-            config.canvas.viewBox.th,
-            config.canvas.viewBox.f
+            summaryData,
+            false
         ),
         undefined,
-        dataForConsideration
+        dataForConsideration,
+        summaryData
     )
   }
 
