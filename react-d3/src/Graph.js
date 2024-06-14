@@ -35,17 +35,20 @@ export default function Graph () {
   }
 
 
-  function createLayoutData (filteredData, summary_data, filtered = false, height=detectedHeight * 2, width=detectedWidth * .85, padding=config.canvas.padding) {
+  function createLayoutData (filteredData, summary_data, filtered = false, rawHeight=detectedHeight * 2, width=detectedWidth * 1.5, padding=config.canvas.padding) {
     function onlyUnique(value, index, array) {
       return array.indexOf(value) === index;
     }
     let edge_cnt = summary_data.edge_cnt
-    let padding_value = height / (edge_cnt * .5)
+    let gamma = Math.log(edge_cnt + 1) / 2
+    let height = rawHeight * gamma
+    let theta = (1 + (1 / Math.log(edge_cnt)) - 1/2) / (Math.E - .832)
+    let padding_value = height / (edge_cnt * theta)
     const layout = d3Bipartite(
             lhsAvailibleSorting[config.sortingConf.lhs],
             rhsAvailibleSorting[config.sortingConf.rhs]
     )
-      .width(width)
+      .width(width * (gamma + 1))
       .height(height)
       .padding(padding_value)
       .source(d => d.source)
@@ -263,66 +266,6 @@ export default function Graph () {
          .on("mouseenter", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
          .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
 
-     function fixLabels(labels, left = true) {
-        var prevs = [];
-        var iterations = 20
-        var done = false
-        while (!done) {
-            prevs = [];
-            done = true
-            iterations -= 1
-            if (iterations == 0) {
-                break
-            }
-            labels.each(function(d, i) {
-              let comparison_obj = this
-              prevs.forEach(function(prev) {
-                if(i > 0) {
-                  var thisbb = comparison_obj.getBoundingClientRect();
-                  var prevbb = prev.getBoundingClientRect();
-                  // move if they overlap
-                  let overlap = !(thisbb.right < prevbb.left ||
-                          thisbb.left > prevbb.right ||
-                          thisbb.bottom < prevbb.top ||
-                          thisbb.top > prevbb.bottom)
-                  if(overlap) {
-                      done = false
-                      let selection = d3.select(comparison_obj)
-                      var prev_value = 0
-                      var prev_transform = selection._groups[0][0].getAttribute("transform")
-                      if (!(prev_transform == null || prev_transform == "" || typeof prev_transform == "undefined")) {
-                          prev_value = parseFloat(
-                            selection._groups[0][0].getAttribute("transform").split(",")[0].split("(")[1]
-                          )
-                      }
-                      if (!left) {
-                        let translate_value = prev_value + (prevbb.width + thisbb.width) * 1.25
-                        selection.attr("transform",
-                            "translate(" + translate_value + ", 0)");
-                      } else {
-                        let translate_value = prev_value + (-1 * ((prevbb.width + thisbb.width) * 1.25))
-                        selection.attr("transform",
-                            "translate(" + translate_value + ", 0)");
-                      }
-                    }
-                }
-              })
-              prevs.push(comparison_obj)
-            });
-        }
-        // add attribute to labels to store original translate x value
-        labels.each(function(_, __) {
-          let selection = d3.select(this)
-          let transform = selection._groups[0][0].getAttribute("transform")
-          let value = 0
-          if (!(transform == null || transform == "" || typeof transform == "undefined")) {
-            value = parseFloat(transform.split(",")[0].split("(")[1])
-            selection.attr("data-original-translate-x", value)
-          }
-        })
-    }
-    fixLabels(srclabels)
-    fixLabels(tgtlabels, false)
 
     let path_str = lines._groups[0][0].getAttribute("d")
     let path_parts = path_str.split(' ')
