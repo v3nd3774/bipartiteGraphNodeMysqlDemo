@@ -310,6 +310,16 @@ export default function Graph () {
               prevs.push(comparison_obj)
             });
         }
+        // add attribute to labels to store original translate x value
+        labels.each(function(_, __) {
+          let selection = d3.select(this)
+          let transform = selection._groups[0][0].getAttribute("transform")
+          let value = 0
+          if (!(transform == null || transform == "" || typeof transform == "undefined")) {
+            value = parseFloat(transform.split(",")[0].split("(")[1])
+            selection.attr("data-original-translate-x", value)
+          }
+        })
     }
     fixLabels(srclabels)
     fixLabels(tgtlabels, false)
@@ -329,12 +339,15 @@ export default function Graph () {
       }
       if (eventType !== 'wheel') {
         e.transform.k = old_scale
-      } else {
-        srclabels
-            .attr("transform", `scale(${e.transform.k}, 1)`);
       }
       function scaleAndMaintainOffset(domElement, _, __) {
        let old_transform = domElement.getAttribute("transform")
+
+       let new_transform_to_apply_dict = {
+        'scale': [e.transform.k, 1],
+       }
+
+       let merged_transform_dict = {}
 
        if (!(old_transform == null || old_transform == "" || typeof old_transform == "undefined")) {
          console.log("prev_transform" + old_transform)
@@ -345,11 +358,24 @@ export default function Graph () {
                 acc[name] = values.map(parseFloat)
                 return acc
             }, {})
-                    // WORKING HERE
          console.log("prev_transform_parsed" + prev_transform_dict)
+         merged_transform_dict = Object.assign(merged_transform_dict, prev_transform_dict)
        }
 
-       let transform_str = `scale(${e.transform.k}, 1)`
+       merged_transform_dict = Object.assign(merged_transform_dict, new_transform_to_apply_dict)
+
+       if ('scale' in merged_transform_dict && 'translate' in merged_transform_dict) {
+            let scale = merged_transform_dict['scale']
+            let translate = merged_transform_dict['translate']
+            let original_translate = parseFloat(d3.select(domElement).attr("data-original-translate-x"))
+            translate[0] = original_translate
+            let new_translate = translate.map((val, idx) => val * scale[idx])
+            merged_transform_dict['translate'] = new_translate
+       }
+
+       let transform_str = Object.entries(merged_transform_dict).map(([name, values]) => {
+            return `${name}(${values.join(',')})`
+        }).join(' ')
 
        d3.select(domElement).attr("transform", transform_str);
       }
@@ -357,6 +383,7 @@ export default function Graph () {
       tgtlabels
         .attr('x', d => last_x_int / e.transform.k)
 
+      srclabels._groups[0].forEach(scaleAndMaintainOffset)
       tgtlabels._groups[0].forEach(scaleAndMaintainOffset)
 
       cont
