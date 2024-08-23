@@ -162,7 +162,6 @@ export default function Graph () {
     const container = d3.select("svg").append('g')
        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
     const nodeWidth = 1;
-    //console.log(config.sortingConf)
     let { flows, sources, targets } = createLayoutData(
       rawData,
       summaryData,
@@ -293,7 +292,6 @@ export default function Graph () {
        let merged_transform_dict = {}
 
        if (!(old_transform == null || old_transform == "" || typeof old_transform == "undefined")) {
-         console.log("prev_transform" + old_transform)
          let prev_transform_dict = old_transform.split(/[^,] [^,]/).reduce((acc, setting) => {
                 let name = setting.split('(')[0]
                 let value = setting.split('(')[1].slice(0,-1)
@@ -301,7 +299,6 @@ export default function Graph () {
                 acc[name] = values.map(parseFloat)
                 return acc
             }, {})
-         console.log("prev_transform_parsed" + prev_transform_dict)
          merged_transform_dict = Object.assign(merged_transform_dict, prev_transform_dict)
        }
 
@@ -369,8 +366,8 @@ export default function Graph () {
         })
       reactData = reactData
     }
-    //console.log("Noise removal to avoid y axis labels on LHS stacking")
     //var frequencies = reactData["summary_stats"]["unique_node_cnts"]["LHS"]
+    console.log(reactData)
     //console.log("freqs")
     //console.log(frequencies)
     // purge elements from being rendered that have less than 10 targets
