@@ -44,13 +44,15 @@ export default function Graph () {
     let height = rawHeight * gamma
     let theta = (1 + (1 / Math.log(edge_cnt)) - 1/2) / (Math.E - .832)
     let padding_value = height / (edge_cnt * theta)
+    let currentScale = config.zoomLevel
     const layout = d3Bipartite(
             lhsAvailibleSorting[config.sortingConf.lhs],
-            rhsAvailibleSorting[config.sortingConf.rhs]
+            rhsAvailibleSorting[config.sortingConf.rhs],
+            currentScale
     )
-      .width(width * (gamma + 1))
+      .width(width * gamma)
       .height(height)
-      .padding(padding_value)
+      .padding(height/edge_cnt)
       .source(d => d.source)
       .target(d => d.target)
       .value(d => d.value);
@@ -328,6 +330,7 @@ export default function Graph () {
 
       cont
           .attr("transform", `scale(1, ${e.transform.k}) translate(0, ${e.transform.y})`);
+      setConfig(updateConfig("zoomLevel", e.transform.k, config))
     }
     let zoom = d3.zoom()
       .scaleExtent([0.1, 5])
