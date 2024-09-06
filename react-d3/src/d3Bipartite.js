@@ -6,6 +6,8 @@ import * as d3Interpolate from 'd3-interpolate';
 // https://github.com/ilyabo/d3-bipartite/tree/master
 // Modified the library from here to enable sorting left and right
 // hand sides of the graph with different comparators.
+// Also modified to enable text to not overlap itself when there
+// are lots of nodes on one side of the graph.
 
 function defaultSource(d) { return d.source; }
 function defaultTarget(d) { return d.target; }
@@ -62,7 +64,7 @@ function link(d, curvature) {
         + " " + x1 + "," + y1;
 }
 
-export function d3Bipartite(sourceComparator, targetComparator) {
+export function d3Bipartite(sourceComparator, targetComparator, currentScale) {
 
   var source = defaultSource,
       target = defaultTarget,
@@ -80,6 +82,13 @@ export function d3Bipartite(sourceComparator, targetComparator) {
       curvature = .5;
 
   var bipartite = function(_flows) {
+    // Doesn't work because zoom never calls this method as it would be too taxing.
+    // To do other zoom logic which retains element position and ALSO redraw the graph.
+    //let zoom_constant = 18.8603
+    //let padding_extra = currentScale === undefined ?
+    //    0 :
+    //    (1/Math.log2(currentScale)) * (zoom_constant + 1)
+    let padding_extra = 48
 
     var flows = _flows.map(wrap),
         sources = d3.sort(nodeTotals(flows, defaultSource), sourceComparator),
@@ -87,12 +96,12 @@ export function d3Bipartite(sourceComparator, targetComparator) {
 
     k = Math.min(scaleK(sources, height, padding), scaleK(targets, height, padding));
 
-    layout(sources, padding, 0, height, null, 0, k);
+    layout(sources, padding + padding_extra, 0, height, null, 0, k);
     sources.forEach(function(node) {
       layout(node.values, 0, 0, node.height, 'start', node.y, k);
     });
 
-    layout(targets, padding, width, height, null, 0, k);
+    layout(targets, padding + padding_extra, width, height, null, 0, k);
     targets.forEach(function(node) {
       layout(node.values, 0, width, node.height, 'end', node.y, k);
     });

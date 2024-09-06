@@ -123,8 +123,16 @@ RowType: TypedDict = TypedDict("RowType", {
     'user_quality_score': int,
     'value': int
 })
-
-def row_jsonifier( # pylint: disable=too-many-arguments
+UniqueNodeCnt: TypedDict = TypedDict("UniqueNodeCnt",{
+    "label": str,
+    "cnt": int
+})
+SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
+    "edge_cnt": int,
+    "unique_node_set_size": Dict[str, int],
+    "unique_node_cnts": Dict[str, List[UniqueNodeCnt]]
+})
+def row_jsonifier_simple( # pylint: disable=too-many-arguments
     row: RawRowType,
     source_col: str = config['MYSQL_LABELER_COLUMN'],
     target_col: str = config['MYSQL_LABELEE_ID_COLUMN'],
@@ -142,8 +150,22 @@ def row_jsonifier( # pylint: disable=too-many-arguments
         'label': row[label_col], # type: ignore
         'content': row[content_col], # type: ignore
         'user_quality_score': row[user_quality_score_col], # type: ignore
-        'value': edge_weight
+        'value': 1
     }
+
+def row_jsonifier_enrich(row: RowType, summary_stats: SummaryStatsType) -> RowType:
+    """ Enriches a row with additional data from the summary stats. """
+    n: int = summary_stats["edge_cnt"]
+    output_data: RowType = row
+    source_key: str = row["source"]
+    target_key: str = row["target"]
+    source_summary: UniqueNodeCnt = list(filter(lambda x: x["label"] == source_key,
+                                                summary_stats["unique_node_cnts"]["LHS"]))[0]
+    target_summary: UniqueNodeCnt = list(filter(lambda x: x["label"] == target_key,
+                                                summary_stats["unique_node_cnts"]["RHS"]))[0]
+    edge_connections: int = source_summary["cnt"] + target_summary["cnt"]
+    output_data['value'] = edge_connections
+    return output_data
 
 def lst_2_frq(acc: Dict[str, Dict[str, int]], d: RowType) -> Dict[str, Dict[str, int]]:
     """ Converts a list to a dict of frequencies for each half of bipartite graph. """
@@ -151,16 +173,6 @@ def lst_2_frq(acc: Dict[str, Dict[str, int]], d: RowType) -> Dict[str, Dict[str,
     acc["RHS"][d["target"]] = acc["RHS"].get(d["target"], 0) + 1
     return acc
 
-
-UniqueNodeCnt: TypedDict = TypedDict("UniqueNodeCnt",{
-    "label": str,
-    "cnt": int
-})
-SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
-    "edge_cnt": int,
-    "unique_node_set_size": Dict[str, int],
-    "unique_node_cnts": Dict[str, List[UniqueNodeCnt]]
-})
 def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
     """ Calculates summary statistics from raw data. """
     edge_cnt: int = len(data)
@@ -207,12 +219,13 @@ def data_jsonifier(raw_data: List[RawRowType], skip_label: Any = 0) -> ReturnDat
     Applies jsonifier to raw data to organize in consistent format.
     Also calculates and includes summary stats in this format.
     """
-    data = [row_jsonifier(row) for row in raw_data]
+    data = [row_jsonifier_simple(row) for row in raw_data]
     summary_stats = calculate_summary_stats(data)
     no_skip_data: List[RowType] = [x for x in data if x['label'] != skip_label]
     no_skip_summary_stats = calculate_summary_stats(no_skip_data)
+    output_data = [row_jsonifier_enrich(record, summary_stats) for record in data]
     return {
-        "data":data,
+        "data":output_data,
         "summary_stats":summary_stats,
         "no_skip_data":no_skip_data,
         "no_skip_summary_stats":no_skip_summary_stats

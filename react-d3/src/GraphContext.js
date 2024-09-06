@@ -45,6 +45,7 @@ import {createContext} from 'react';
         datetimeRanges: [
             [new Date("01/01/1970"), new Date()]
         ]
-  }
+  },
+  zoomLevel: 1
 }
 export const GraphContext = createContext()
