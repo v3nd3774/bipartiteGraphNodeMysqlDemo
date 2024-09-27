@@ -37,6 +37,9 @@ class GraphConfig extends Component {
     this.updateOmitSkip = this.updateOmitSkip.bind(this)
     this.updateSubmitSuccessModal = this.updateSubmitSuccessModal.bind(this)
     this.determineWhichCheckboxToUse = this.determineWhichCheckboxToUse.bind(this)
+    this.updateRHSThreshold = this.updateRHSThreshold.bind(this)
+    this.updateLHSThreshold = this.updateLHSThreshold.bind(this)
+    this.updateThreshold = this.updateThreshold.bind(this)
   }
 
   determineWhichCheckboxToUse() {
@@ -91,6 +94,29 @@ class GraphConfig extends Component {
     var newApi = this.updateForm(event, keyString, config.data.api)
     config.data.api = newApi
     this.setState(config)
+  }
+
+  updateThreshold(event, keyString) {
+    const [config, _] = this.context
+    var newEvent = null
+    try {
+      newEvent = Object.assign({}, event, {target: {value: parseInt(event.target.value)}})
+    } catch (_) {
+      console.log("Unable to parse as int the threshold value, check for validity...")
+    }
+    if (newEvent != null) {
+      var newFilterConf = this.updateForm(newEvent, keyString, config.filterConf)
+      config.filterConf = newFilterConf
+      this.setState(config)
+    }
+  }
+
+  updateRHSThreshold(event) {
+    this.updateThreshold(event, "rightRenderThreshold")
+  }
+
+  updateLHSThreshold(event) {
+    this.updateThreshold(event, "leftRenderThreshold")
   }
 
   updateSubmitSuccessModal() {
@@ -346,6 +372,24 @@ class GraphConfig extends Component {
           placeholder="API endpoint HERE"
           value={this.state ? this.state.data.api.endpoint : ""}
           onChange={this.updateApiEndpoint}
+        />
+      </Form.Group>
+      <Form.Group className="col-sm-6" controlId="formThresholdLHS">
+        <Form.Label>Threshold for LHS rendering</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder="Threshold value HERE"
+          value={this.state ? this.state.filterConf.leftRenderThreshold : ""}
+          onChange={this.updateLHSThreshold}
+        />
+      </Form.Group>
+      <Form.Group className="col-sm-6" controlId="formThresholdRHS">
+        <Form.Label>Threshold for RHS rendering</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder="Threshold value HERE"
+          value={this.state ? this.state.filterConf.rightRenderThreshold : ""}
+          onChange={this.updateRHSThreshold}
         />
       </Form.Group>
     </Form>

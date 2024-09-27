@@ -45,7 +45,9 @@ import {createContext} from 'react';
         ],
         datetimeRanges: [
             [new Date("01/01/1970"), new Date()]
-        ]
+        ],
+        leftRenderThreshold: 10,
+        rightRenderThreshold: 10,
   },
   zoomLevel: 1
 }

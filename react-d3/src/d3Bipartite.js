@@ -88,7 +88,7 @@ export function d3Bipartite(sourceComparator, targetComparator, currentScale) {
     //let padding_extra = currentScale === undefined ?
     //    0 :
     //    (1/Math.log2(currentScale)) * (zoom_constant + 1)
-    let padding_extra = 48
+    let padding_extra = 12
 
     var flows = _flows.map(wrap),
         sources = d3.sort(nodeTotals(flows, defaultSource), sourceComparator),
