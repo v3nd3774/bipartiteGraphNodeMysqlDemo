@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import ShowModal from './ShowModal'
 import { defaults, GraphContext } from './GraphContext';
 import { updateConfig } from './Utility.js';
 import { lhsAvailibleSorting, rhsAvailibleSorting } from './Sorting.js';
@@ -34,6 +35,7 @@ class GraphConfig extends Component {
     this.updateLhs = this.updateLhs.bind(this)
     this.updateOmitSkipAux = this.updateOmitSkipAux.bind(this)
     this.updateOmitSkip = this.updateOmitSkip.bind(this)
+    this.updateSubmitSuccessModal = this.updateSubmitSuccessModal.bind(this)
     this.determineWhichCheckboxToUse = this.determineWhichCheckboxToUse.bind(this)
   }
 
@@ -72,9 +74,11 @@ class GraphConfig extends Component {
   }
 
   handleSubmit(event) {
-    const [_, setConfig] = this.context
+    const [config, setConfig] = this.context
     event.preventDefault()
     setConfig(this.state)
+    this.updateSubmitSuccessModal()
+    this.setState(config)
   }
 
   componentDidMount() {
@@ -86,6 +90,13 @@ class GraphConfig extends Component {
     const [config, _] = this.context
     var newApi = this.updateForm(event, keyString, config.data.api)
     config.data.api = newApi
+    this.setState(config)
+  }
+
+  updateSubmitSuccessModal() {
+    const [config, _] = this.context
+    var newData = Object.assign({}, config.data, {'submitSuccessModal': !config.data.submitSuccessModal})
+    config.data = newData
     this.setState(config)
   }
 
@@ -174,6 +185,8 @@ class GraphConfig extends Component {
 
   render() {
     return (
+    <>
+    <ShowModal />
     <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
       <Button variant="primary col-sm-12 mb-3" type="submit">
         Submit
@@ -336,6 +349,7 @@ class GraphConfig extends Component {
         />
       </Form.Group>
     </Form>
+    </>
     )
   }
 }

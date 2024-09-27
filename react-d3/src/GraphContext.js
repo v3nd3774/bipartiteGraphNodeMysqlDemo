@@ -30,7 +30,8 @@ import {createContext} from 'react';
       port: "5001",
       endpoint: "environ",
       getorPost: true
-    }
+    },
+    submitSuccessModal: false
   },
   response: {},
   sortingConf: {
