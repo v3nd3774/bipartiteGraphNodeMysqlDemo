@@ -7,7 +7,7 @@ import copy
 import json
 import datetime
 from functools import reduce
-from typing import Dict, List, TypeAlias, Final, Any
+from typing import Dict, List, TypeAlias, Final, Any, Literal, Sequence, Mapping
 from typing_extensions import TypedDict
 from flask import Response, request, Flask
 from flask_caching import Cache
@@ -129,8 +129,8 @@ UniqueNodeCnt: TypedDict = TypedDict("UniqueNodeCnt",{
 })
 SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
     "edge_cnt": int,
-    "unique_node_set_size": Dict[str, int],
-    "unique_node_cnts": Dict[str, List[UniqueNodeCnt]]
+    "unique_node_set_size": Mapping[Literal["LHS", "RHS"], int],
+    "unique_node_cnts": Mapping[Literal["LHS", "RHS"], Sequence[UniqueNodeCnt]]
 })
 def row_jsonifier_simple( # pylint: disable=too-many-arguments
     row: RawRowType,
@@ -140,7 +140,6 @@ def row_jsonifier_simple( # pylint: disable=too-many-arguments
     time_format: str = config["MYSQL_OUTPUT_TIME_FORMAT"],
     label_col: str = config['MYSQL_LABEL_COLUMN'],
     content_col: str = config["MYSQL_LABELEE_CONTENT_COLUMN"],
-    edge_weight: int = int(config.get("EDGE_WEIGHT", "1")),
     user_quality_score_col: str = config["MYSQL_LABELER_QUALITY_COLUMN"]) -> RowType:
     """ Converts a row into a consistent format for use in graph generation. """
     return {
@@ -155,7 +154,6 @@ def row_jsonifier_simple( # pylint: disable=too-many-arguments
 
 def row_jsonifier_enrich(row: RowType, summary_stats: SummaryStatsType) -> RowType:
     """ Enriches a row with additional data from the summary stats. """
-    n: int = summary_stats["edge_cnt"]
     output_data: RowType = row
     source_key: str = row["source"]
     target_key: str = row["target"]
@@ -167,27 +165,32 @@ def row_jsonifier_enrich(row: RowType, summary_stats: SummaryStatsType) -> RowTy
     output_data['value'] = edge_connections
     return output_data
 
-def lst_2_frq(acc: Dict[str, Dict[str, int]], d: RowType) -> Dict[str, Dict[str, int]]:
+def lst_2_frq(
+        acc: Mapping[Literal["LHS","RHS"], Dict[str, int]],
+        d: RowType
+    ) -> Mapping[Literal["LHS", "RHS"], Dict[str, int]]:
     """ Converts a list to a dict of frequencies for each half of bipartite graph. """
     acc["LHS"][d["source"]] = acc["LHS"].get(d["source"], 0) + 1
     acc["RHS"][d["target"]] = acc["RHS"].get(d["target"], 0) + 1
     return acc
 
-def calculate_summary_stats(data: List[RowType]) -> SummaryStatsType:
+def calculate_summary_stats(data: Sequence[RowType]) -> SummaryStatsType:
     """ Calculates summary statistics from raw data. """
     edge_cnt: int = len(data)
-    nodes: Dict[str, List[str]] = {
+    nodes: Mapping[Literal["LHS", "RHS"], Sequence[str]] = {
         "LHS": [x['source'] for x in data],
         "RHS": [x['target'] for x in data]
     }
-    unique_nodes: Dict[str, set[str]] = {k:set(v) for k,v in nodes.items()}
-    unique_node_set_size: Dict[str, int] = {k:len(v) for k,v in unique_nodes.items()}
-    unique_node_cnts_raw: Dict[str, Dict[str, int]] = reduce(
+    unique_nodes: Mapping[Literal["LHS", "RHS"], set[str]] = {k:set(v) for k,v in nodes.items()}
+    unique_node_set_size: Mapping[Literal["LHS", "RHS"], int] = {
+        k:len(v) for k,v in unique_nodes.items()
+    }
+    unique_node_cnts_raw: Mapping[Literal["LHS", "RHS"], Dict[str, int]] = reduce(
         lst_2_frq,
         data,
         {"LHS":{}, "RHS":{}}
     )
-    unique_node_cnts: Dict[str, List[UniqueNodeCnt]] = {
+    unique_node_cnts: Mapping[Literal["LHS", "RHS"], Sequence[UniqueNodeCnt]] = {
         "LHS": [
            {
                "label": k,
@@ -214,13 +217,46 @@ ReturnDataType: TypedDict = TypedDict("ReturnDataType", {
     "no_skip_data": List[RowType],
     "no_skip_summary_stats": SummaryStatsType
 })
-def data_jsonifier(raw_data: List[RawRowType], skip_label: Any = 0) -> ReturnDataType:
+
+def determine_nodes_to_remove(data: Sequence[UniqueNodeCnt], thresh: int) -> Sequence[str]:
+    """ Determines the nodes to remove based on a threshold. """
+    nodes_to_remove: List[str] = []
+    for record in data:
+        if record["cnt"] < thresh:
+            nodes_to_remove.append(record["label"])
+    return nodes_to_remove
+
+def remove_nodes(data: Sequence[RowType], lhs_to_remove: Sequence[str],
+                 rhs_to_remove: Sequence[str]) -> Sequence[RowType]:
+    """ Removes nodes from the data based on the nodes to remove. """
+    output_data: Sequence[RowType] = [
+        x for x in data
+        if x['source'] not in lhs_to_remove
+        and x['target'] not in rhs_to_remove
+    ]
+    return output_data
+
+def data_jsonifier(raw_data: List[RawRowType], skip_label: Any = 0, lhs_thresh: int = 0,
+                   rhs_thresh: int = 0) -> ReturnDataType:
     """
     Applies jsonifier to raw data to organize in consistent format.
     Also calculates and includes summary stats in this format.
     """
-    data = [row_jsonifier_simple(row) for row in raw_data]
-    summary_stats = calculate_summary_stats(data)
+    data: Sequence[RowType] = [row_jsonifier_simple(row) for row in raw_data]
+    summary_stats: SummaryStatsType = calculate_summary_stats(data)
+    if lhs_thresh > 0 or rhs_thresh > 0:
+        lhs_to_remove: Sequence[str] = []
+        rhs_to_remove: Sequence[str] = []
+        if lhs_thresh > 0:
+            lhs_to_remove = determine_nodes_to_remove(
+                summary_stats["unique_node_cnts"]["LHS"], lhs_thresh
+            )
+        if rhs_thresh > 0:
+            rhs_to_remove = determine_nodes_to_remove(
+                summary_stats["unique_node_cnts"]["RHS"], rhs_thresh
+            )
+        data = remove_nodes(data, lhs_to_remove, rhs_to_remove)
+        summary_stats = calculate_summary_stats(data)
     no_skip_data: List[RowType] = [x for x in data if x['label'] != skip_label]
     no_skip_summary_stats = calculate_summary_stats(no_skip_data)
     output_data = [row_jsonifier_enrich(record, summary_stats) for record in data]
@@ -231,9 +267,19 @@ def data_jsonifier(raw_data: List[RawRowType], skip_label: Any = 0) -> ReturnDat
         "no_skip_summary_stats":no_skip_summary_stats
     }
 
+# this isn't working right for some reason
+@cache.memoize()
+def run_query(query: str) -> List[RawRowType]:
+    """ Runs a query and returns the results. """
+    with engine.connect() as connection:
+        result: List[RawRowType] = [
+            r._asdict()
+            for r in connection.execute(text(query))
+        ]
+    return result
 
 @app.route("/environ", methods=["GET", "OPTIONS"])
-@cache.cached()
+@cache.cached(query_string=True)
 def serve_environ() -> Response:
     """ Returns the row using the environment config to extract necessary data. """
     r: Response = Response()
@@ -242,14 +288,14 @@ def serve_environ() -> Response:
         r.headers.add('Access-Control-Allow-Headers', "*")
         r.headers.add('Access-Control-Allow-Methods', "*")
     else: # actual req
-        with engine.connect() as connection:
-            result: List[RawRowType] = [
-                r._asdict()
-                for r in connection.execute(text(config["MYSQL_JOIN_QUERY"]))
-            ]
-            data: ReturnDataType = data_jsonifier(result)
-            r = Response(response=json.dumps(data), status=200, mimetype="application/json")
-            r.headers.add("Access-Control-Allow-Origin", "*")
+        result: List[RawRowType] = run_query(config["MYSQL_JOIN_QUERY"])
+        lhs_thresh: int = int(request.args.get("LHSThresh", 0))
+        rhs_thresh: int = int(request.args.get("RHSThresh", 0))
+        data: ReturnDataType = data_jsonifier(result,
+                                              lhs_thresh=lhs_thresh,
+                                              rhs_thresh=rhs_thresh)
+        r = Response(response=json.dumps(data), status=200, mimetype="application/json")
+        r.headers.add("Access-Control-Allow-Origin", "*")
     return r
 
 def check_query_safety(x: str) -> bool:
@@ -290,22 +336,22 @@ def serve_custom() -> Response:
         ##
         ####
         ####
-        with engine.connect() as connection:
-            query: str = request_struct["MYSQL_JOIN_QUERY"]
-            qsafe: bool = check_query_safety(query)
-            if qsafe:
-                result: List[RawRowType] = [
-                    r._asdict()
-                    for r in connection.execute(text(request_struct["MYSQL_JOIN_QUERY"]))
-                ]
-                data: ReturnDataType = data_jsonifier(result)
-                r.set_data(json.dumps(data))
-                r.status_code = 200
-                r.mimetype = "application/json"
-            else:
-                r.set_data("Only allowed SELECT queries...")
-                print(json.dumps(request_struct))
-                r.status_code = 405
+        query: str = request_struct["MYSQL_JOIN_QUERY"]
+        qsafe: bool = check_query_safety(query)
+        if qsafe:
+            result: List[RawRowType] = run_query(request_struct["MYSQL_JOIN_QUERY"])
+            lhs_thresh: int = int(request.args.get("LHSThresh", 0))
+            rhs_thresh: int = int(request.args.get("RHSThresh", 0))
+            data: ReturnDataType = data_jsonifier(result,
+                                                  lhs_thresh=lhs_thresh,
+                                                  rhs_thresh=rhs_thresh)
+            r.set_data(json.dumps(data))
+            r.status_code = 200
+            r.mimetype = "application/json"
+        else:
+            r.set_data("Only allowed SELECT queries...")
+            print(json.dumps(request_struct))
+            r.status_code = 405
     return r
 
 if __name__ == "__main__":
