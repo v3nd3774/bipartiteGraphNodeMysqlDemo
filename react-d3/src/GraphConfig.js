@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import ShowModal from './ShowModal'
 import { defaults, GraphContext } from './GraphContext';
 import { updateConfig } from './Utility.js';
 import { lhsAvailibleSorting, rhsAvailibleSorting } from './Sorting.js';
@@ -34,7 +35,11 @@ class GraphConfig extends Component {
     this.updateLhs = this.updateLhs.bind(this)
     this.updateOmitSkipAux = this.updateOmitSkipAux.bind(this)
     this.updateOmitSkip = this.updateOmitSkip.bind(this)
+    this.updateSubmitSuccessModal = this.updateSubmitSuccessModal.bind(this)
     this.determineWhichCheckboxToUse = this.determineWhichCheckboxToUse.bind(this)
+    this.updateRHSThreshold = this.updateRHSThreshold.bind(this)
+    this.updateLHSThreshold = this.updateLHSThreshold.bind(this)
+    this.updateThreshold = this.updateThreshold.bind(this)
   }
 
   determineWhichCheckboxToUse() {
@@ -72,9 +77,11 @@ class GraphConfig extends Component {
   }
 
   handleSubmit(event) {
-    const [_, setConfig] = this.context
+    const [config, setConfig] = this.context
     event.preventDefault()
     setConfig(this.state)
+    this.updateSubmitSuccessModal()
+    this.setState(config)
   }
 
   componentDidMount() {
@@ -86,6 +93,36 @@ class GraphConfig extends Component {
     const [config, _] = this.context
     var newApi = this.updateForm(event, keyString, config.data.api)
     config.data.api = newApi
+    this.setState(config)
+  }
+
+  updateThreshold(event, keyString) {
+    const [config, _] = this.context
+    var newEvent = null
+    try {
+      newEvent = Object.assign({}, event, {target: {value: parseInt(event.target.value)}})
+    } catch (_) {
+      console.log("Unable to parse as int the threshold value, check for validity...")
+    }
+    if (newEvent != null) {
+      var newFilterConf = this.updateForm(newEvent, keyString, config.filterConf)
+      config.filterConf = newFilterConf
+      this.setState(config)
+    }
+  }
+
+  updateRHSThreshold(event) {
+    this.updateThreshold(event, "rightRenderThreshold")
+  }
+
+  updateLHSThreshold(event) {
+    this.updateThreshold(event, "leftRenderThreshold")
+  }
+
+  updateSubmitSuccessModal() {
+    const [config, _] = this.context
+    var newData = Object.assign({}, config.data, {'submitSuccessModal': !config.data.submitSuccessModal})
+    config.data = newData
     this.setState(config)
   }
 
@@ -174,6 +211,8 @@ class GraphConfig extends Component {
 
   render() {
     return (
+    <>
+    <ShowModal />
     <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
       <Button variant="primary col-sm-12 mb-3" type="submit">
         Submit
@@ -335,7 +374,26 @@ class GraphConfig extends Component {
           onChange={this.updateApiEndpoint}
         />
       </Form.Group>
+      <Form.Group className="col-sm-6" controlId="formThresholdLHS">
+        <Form.Label>Threshold for LHS rendering</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder="Threshold value HERE"
+          value={this.state ? this.state.filterConf.leftRenderThreshold : ""}
+          onChange={this.updateLHSThreshold}
+        />
+      </Form.Group>
+      <Form.Group className="col-sm-6" controlId="formThresholdRHS">
+        <Form.Label>Threshold for RHS rendering</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder="Threshold value HERE"
+          value={this.state ? this.state.filterConf.rightRenderThreshold : ""}
+          onChange={this.updateRHSThreshold}
+        />
+      </Form.Group>
     </Form>
+    </>
     )
   }
 }

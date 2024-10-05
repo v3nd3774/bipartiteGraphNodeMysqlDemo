@@ -347,6 +347,9 @@ export default function Graph () {
     d3.select("div.container").html(stringToInject)
     var reactData;
     var api_url = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/${config.data.api.endpoint}`
+    var filterObj = {"LHSThresh": config.filterConf.leftRenderThreshold, "RHSThresh": config.filterConf.rightRenderThreshold}
+    var filterQueryStr = Object.entries(filterObj).map(([key, value]) => `${key}=${value}`).join('&')
+    var api_url = `${api_url}?${filterQueryStr}`
     if(config.data.api.request == "GET") {
       reactData = await d3.json(api_url, function(error, data) {
         return data
@@ -365,16 +368,15 @@ export default function Graph () {
           MYSQL_LABELEE_ID_COLUMN: config.data.db.labeleeIdCol,
           MYSQL_LABELEE_CONTENT_COLUMN: config.data.db.labeleeContentCol ,
           MYSQL_TIME_COLUMN: config.data.db.timeCol,
-          MYSQL_OUTPUT_TIME_FORMAT: config.data.db.timeOutFormat
+          MYSQL_OUTPUT_TIME_FORMAT: config.data.db.timeOutFormat,
+          THRESHOLD_LHS: config.filterConf.leftRenderThreshold,
+          THRESHOLD_RHS: config.filterConf.rightRenderThreshold
         })
       reactData = reactData
     }
-    //var frequencies = reactData["summary_stats"]["unique_node_cnts"]["LHS"]
+    console.log("rawReactData")
     console.log(reactData)
-    //console.log("freqs")
-    //console.log(frequencies)
     // purge elements from being rendered that have less than 10 targets
-    //reactData = reactData.data.filter((item) => frequencies[item.source] >= 10)
     const svg = d3.select("div.container > svg")
     svg.selectAll("*").remove()
     setConfig(updateConfig("response", reactData, config))
@@ -414,7 +416,7 @@ export default function Graph () {
   }, [
     useMemo(
       () => (config.response),
-      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip, config.filterConf.timeRanges]
+      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip, config.filterConf.timeRanges, config.filterConf.datetimeRanges, config.filterConf.leftRenderThreshold, config.filterConf.rightRenderThreshold, config.zoomLevel]
     )
   ])
 
