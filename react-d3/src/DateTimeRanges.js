@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import { GraphContext } from './GraphContext';
+import { subtractOneDay, subtractOneYear, GraphContext } from './GraphContext';
 
 import DateTimeRange from './DateTimeRange';
 import './DateTimeRanges.css';
@@ -21,7 +21,7 @@ function handleNew(_, config) {
     console.log(`Clicked on plus`)
     let newConfig = {}
     for(var k in config) newConfig[k] = config[k]
-    newConfig.filterConf.datetimeRanges.push([new Date("01/01/1970"), new Date()])
+    newConfig.filterConf.datetimeRanges.push([subtractOneDay(subtractOneYear(new Date())), new Date()])
     return newConfig
 }
 

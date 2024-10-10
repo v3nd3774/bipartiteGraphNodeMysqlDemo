@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import { GraphContext } from './GraphContext';
+import { subtractOneDay, subtractOneYear, GraphContext } from './GraphContext';
 
 import './DateTimeRange.css';
 
@@ -34,12 +34,18 @@ function retrieveEndDatetime(id, config) {
     return retrieveDatetime(id, config, 1)
 }
 
+function isValidDate(currentDate, selectedDate) {
+    let oneYearAndOneDayAgo = subtractOneDay(subtractOneYear(new Date()))
+    return currentDate.isAfter(oneYearAndOneDayAgo) && currentDate.isBefore(new Date())
+}
+
 function generateDatetimePicker(isStart, updateConfig, id, config) {
     let changeFn = isStart ? updateConfig(handleStartChange) : updateConfig(handleEndChange)
     let value = isStart ? retrieveStartDatetime(id, config) : retrieveEndDatetime(id, config)
     return (<Datetime
         onChange={changeFn}
         value={value}
+        isValidDate={isValidDate}
     />)
 }
 

@@ -1,4 +1,13 @@
 import {createContext} from 'react';
+export function subtractOneYear(date) {
+    let out = new Date(date.getTime())
+    out.setFullYear(date.getFullYear() - 1);
+    return out;
+}
+export function subtractOneDay(date) {
+    let yesterday = new Date(date.getTime() - (24*60*60*1000));
+    return yesterday
+}
  export const defaults = {
   canvas: {
     height: 4500,
@@ -44,7 +53,7 @@ import {createContext} from 'react';
             ["00:00:00", "23:59:59"]
         ],
         datetimeRanges: [
-            [new Date("01/01/1970"), new Date()]
+            [subtractOneYear(new Date()), new Date()]
         ],
         leftRenderThreshold: 10,
         rightRenderThreshold: 10,
