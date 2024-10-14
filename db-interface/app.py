@@ -84,6 +84,8 @@ config: Dict[str, str] = {
     x: os.environ[x] for x in CONFIG_KEYS
 }
 
+datefmt_two: str = "%Y-%m-%d %H:%M:%S"
+
 Cache_Config_Type = TypedDict("Cache_Config_Type", {
     "CACHE_TYPE": str,
     "CACHE_DEFAULT_TIMEOUT": int,
@@ -131,7 +133,9 @@ UniqueNodeCnt: TypedDict = TypedDict("UniqueNodeCnt",{
 SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
     "edge_cnt": int,
     "unique_node_set_size": Mapping[Literal["LHS", "RHS"], int],
-    "unique_node_cnts": Mapping[Literal["LHS", "RHS"], Sequence[UniqueNodeCnt]]
+    "unique_node_cnts": Mapping[Literal["LHS", "RHS"], Sequence[UniqueNodeCnt]],
+    "min_date": str,
+    "max_date": str
 })
 
 @cache.memoize()
@@ -217,10 +221,15 @@ def calculate_summary_stats(data: Sequence[RowType]) -> SummaryStatsType:
         ]
     }
 
+    min_date: datetime.datetime = min([string_to_datetime(x["time"], datefmt=datefmt_two) for x in data]) - datetime.timedelta(days=1)
+    max_date: datetime.datetime = max([string_to_datetime(x["time"], datefmt=datefmt_two) for x in data]) + datetime.timedelta(days=1)
+
     return {
         "edge_cnt": edge_cnt,
         "unique_node_set_size": unique_node_set_size,
-        "unique_node_cnts": unique_node_cnts
+        "unique_node_cnts": unique_node_cnts,
+        "min_date": min_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "max_date": max_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     }
 
 ReturnDataType: TypedDict = TypedDict("ReturnDataType", {
@@ -246,6 +255,15 @@ def remove_nodes(data: Sequence[RowType], lhs_to_remove: Sequence[str],
     ]
     return output_data
 
+class RawTimeFilter(TypedDict):
+    """ One Time filter for data. HH:MM:SS """
+    start: str
+    end: str
+
+class RawTimeFilters(TypedDict):
+    """ One or more Time filters for data."""
+    time_filters: Sequence[RawTimeFilter]
+
 class TimeFilter(TypedDict):
     """ One Time filter for data. HH:MM:SS """
     start: tuple[int, int, int]
@@ -255,10 +273,21 @@ class TimeFilters(TypedDict):
     """ One or more Time filters for data."""
     time_filters: Sequence[TimeFilter]
 
+def raw_time_filters_to_time_filters(raw: RawTimeFilters) -> TimeFilters:
+    """ Converts raw time filters to time filters. """
+    return {
+        "time_filters": [
+            {
+                "start": string_to_time_tuple(x["start"]),
+                "end": string_to_time_tuple(x["end"])
+            } for x in raw["time_filters"]
+        ]
+    }
+
 def string_to_time_tuple(x: str) -> tuple[int, int, int]:
     """ Converts a string to a time tuple. """
-    date_obj: datetime.datetime = string_to_datetime(x)
-    return (date_obj.hour, date_obj.minute, date_obj.second)
+    portions: Sequence[str] = x.split(":")
+    return (int(portions[0]), int(portions[1]), int(portions[2]))
 
 class RawDateTimeFilter(TypedDict):
     """ One DateTime filter for data. YYYY-MM-DDTHH:MM:SS """
@@ -270,9 +299,9 @@ class DateTimeFilter(TypedDict):
     start: datetime.datetime
     end: datetime.datetime
 
-def string_to_datetime(x: str) -> datetime.datetime:
+def string_to_datetime(x: str, datefmt: str = "%Y-%m-%dT%H:%M:%S.%fZ") -> datetime.datetime:
     """ Converts a string to a datetime object. """
-    return datetime.datetime.strptime(x, "%Y-%m-%dT%H:%M:%S")
+    return datetime.datetime.strptime(x, datefmt)
 
 class RawDateTimeFilters(TypedDict):
     """ One or more DateTime filters for data. as strings"""
@@ -307,8 +336,10 @@ def data_jsonifier(
     Also calculates and includes summary stats in this format.
     """
     data: Sequence[RowType] = [row_jsonifier_simple(row) for row in raw_data]
+    summary_stats: SummaryStatsType = calculate_summary_stats(data)
+    min_date: str = summary_stats["min_date"]
+    max_date: str = summary_stats["max_date"]
     if lhs_thresh > 0 or rhs_thresh > 0:
-        summary_stats: SummaryStatsType = calculate_summary_stats(data)
         lhs_to_remove: Sequence[str] = []
         rhs_to_remove: Sequence[str] = []
         if lhs_thresh > 0:
@@ -324,17 +355,19 @@ def data_jsonifier(
         for dt_filter in datetime_filters["datetime_filters"]:
             data = [
                 x for x in data
-                if dt_filter["start"] <= string_to_datetime(x["time"]) <= dt_filter["end"]
+                if dt_filter["start"] <= string_to_datetime(x["time"], datefmt=datefmt_two) <= dt_filter["end"]
             ]
     if time_filters:
         for t_filter in time_filters["time_filters"]:
             data = [
                 x for x in data
-                if t_filter["start"] <= string_to_time_tuple(x["time"]) <= t_filter["end"]
+                if t_filter["start"] <= string_to_time_tuple(x["time"].split(" ")[1]) <= t_filter["end"]
             ]
     if no_skip:
         data = [x for x in data if x['label'] != skip_label]
     summary_stats = calculate_summary_stats(data)
+    summary_stats["min_date"] = min_date
+    summary_stats["max_date"] = max_date
     output_data = [row_jsonifier_enrich(record, summary_stats) for record in data]
     return {
         "data":output_data,
@@ -388,12 +421,30 @@ def serve_custom() -> Response:
             rhs_thresh: int = int(request.args.get("RHSThresh", 0))
             no_skip: bool = bool(request.args.get("OmitSkip", 0))
             time_filters_string: str = request.args.get("TimeFilters", "")
-            time_filters: TimeFilters = check_type("TimeFilters", json.loads(time_filters_string))
+            untyped_time_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(time_filters_string)
+            raw_t_filters: Sequence[RawTimeFilter] = []
+            for x in untyped_time_filters["time_filters"]:
+                assert "start" in x, "Time filter must have start"
+                assert "end" in x, "Time filter must have end"
+                typed_time_filter: RawTimeFilter = {
+                    "start": x["start"],
+                    "end": x["end"]
+                }
+                raw_t_filters = [*raw_t_filters, typed_time_filter]
+            raw_time_filters: RawTimeFilters = { "time_filters": raw_t_filters }
+            time_filters: TimeFilters = raw_time_filters_to_time_filters(raw_time_filters)
             datetime_filters_string: str = request.args.get("DateTimeFilters", "")
-            raw_datetime_filters: RawDateTimeFilters = check_type(
-                "RawDateTimeFilters",
-                json.loads(datetime_filters_string)
-            )
+            untyped_datetime_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(datetime_filters_string)
+            raw_dt_filters: Sequence[RawDateTimeFilter] = []
+            for x in untyped_datetime_filters["datetime_filters"]:
+                assert "start" in x, "DateTime filter must have start"
+                assert "end" in x, "DateTime filter must have end"
+                typed_datetime_filter: RawDateTimeFilter = {
+                    "start": x["start"],
+                    "end": x["end"]
+                }
+                raw_dt_filters = [*raw_dt_filters, typed_datetime_filter]
+            raw_datetime_filters: RawDateTimeFilters = {"datetime_filters": raw_dt_filters}
             datetime_filters: DateTimeFilters = raw_datetime_filters_to_datetime_filters(
                 raw_datetime_filters
             )
@@ -411,6 +462,61 @@ def serve_custom() -> Response:
             print(json.dumps(request_struct))
             r.status_code = 405
     return r
+
+@app.route("/environ", methods=["GET", "OPTIONS"])
+@cache.cached(query_string=True)
+def serve_environ() -> Response:
+    """ Returns the row using the environment config to extract necessary data. """
+    r: Response = Response()
+    if request.method == "OPTIONS": # preflight
+        r.headers.add("Access-Control-Allow-Origin", "*")
+        r.headers.add('Access-Control-Allow-Headers', "*")
+        r.headers.add('Access-Control-Allow-Methods', "*")
+    else: # actual req
+        result: List[RawRowType] = run_query(config["MYSQL_JOIN_QUERY"])
+        lhs_thresh: int = int(request.args.get("LHSThresh", 0))
+        rhs_thresh: int = int(request.args.get("RHSThresh", 0))
+        no_skip: bool = bool(request.args.get("OmitSkip", 0))
+        time_filters_string: str = request.args.get("TimeFilters", "")
+        untyped_time_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(time_filters_string)
+        raw_t_filters: Sequence[RawTimeFilter] = []
+        for x in untyped_time_filters["time_filters"]:
+            assert "start" in x, "Time filter must have start"
+            assert "end" in x, "Time filter must have end"
+            typed_time_filter: RawTimeFilter = {
+                "start": x["start"],
+                "end": x["end"]
+            }
+            raw_t_filters = [*raw_t_filters, typed_time_filter]
+        raw_time_filters: RawTimeFilters = { "time_filters": raw_t_filters }
+        time_filters: TimeFilters = raw_time_filters_to_time_filters(raw_time_filters)
+        datetime_filters_string: str = request.args.get("DateTimeFilters", "")
+        untyped_datetime_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(datetime_filters_string)
+        raw_dt_filters: Sequence[RawDateTimeFilter] = []
+        for x in untyped_datetime_filters["datetime_filters"]:
+            assert "start" in x, "DateTime filter must have start"
+            assert "end" in x, "DateTime filter must have end"
+            typed_datetime_filter: RawDateTimeFilter = {
+                "start": x["start"],
+                "end": x["end"]
+            }
+            raw_dt_filters = [*raw_dt_filters, typed_datetime_filter]
+        raw_datetime_filters: RawDateTimeFilters = {"datetime_filters": raw_dt_filters}
+        datetime_filters: DateTimeFilters = raw_datetime_filters_to_datetime_filters(
+            raw_datetime_filters
+        )
+        data: ReturnDataType = data_jsonifier(result,
+                                              lhs_thresh=lhs_thresh,
+                                              rhs_thresh=rhs_thresh,
+                                              time_filters=time_filters,
+                                              datetime_filters=datetime_filters,
+                                              no_skip=no_skip)
+
+        r = Response(response=json.dumps(data), status=200, mimetype="application/json")
+        r.headers.add("Access-Control-Allow-Origin", "*")
+    return r
+
+
 
 if __name__ == "__main__":
     KwargsType: TypedDict = TypedDict("KwargsType", {

@@ -453,7 +453,7 @@ export default function DataTable () {
   )
 
 
-  const rawData = ! isEmpty(config.response.data) ? (config.filterConf.omitSkip ? config.response.no_skip_data : config.response.data) : makeData(100)
+  const rawData = ! isEmpty(config.response.data) ? config.response.data : makeData(100)
   const dataForConsideration = rawData.map(function (d) {
       var out = {}
       for(var k in d) out[k] = d[k]

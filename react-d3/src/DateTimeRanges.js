@@ -17,22 +17,24 @@ function handleClose(id, config) {
     newConfig.filterConf.datetimeRanges.splice(id, 1)
     return newConfig
 }
-function handleNew(_, config) {
+function handleNew(config) {
     console.log(`Clicked on plus`)
     let newConfig = {}
     for(var k in config) newConfig[k] = config[k]
-    newConfig.filterConf.datetimeRanges.push([subtractOneDay(subtractOneYear(new Date())), new Date()])
+    let minDateStr = newConfig.response.summary_stats.min_date
+    let maxDateStr = newConfig.response.summary_stats.max_date
+    newConfig.filterConf.datetimeRanges.push([
+        new Date(minDateStr), new Date(maxDateStr)
+    ])
     return newConfig
 }
 
-function generate_datetime_range (n, i, handleNewFn, handleCloseFn) {
+function generate_datetime_range (n, i, handleCloseFn) {
     let closeAction = i > 0 ?  (<div className="datetime-range-close"><a href={"javascript:void(0)"} onClick={handleCloseFn}>{closeMark}</a></div>) : ""
-    let newAction = i == n - 1 ? (<div className="datetime-range-new"><a href={"javascript:void(0)"} onClick={handleNewFn}>{plusMark}</a></div>) : ""
     let out = (
         <div className={"datetime-range-control-group"} >
             <DateTimeRange id={i} />
             {closeAction}
-            {newAction}
         </div>
     )
     return out
@@ -42,7 +44,7 @@ function generate_datetime_ranges (n, updateConfig) {
     const ranges = []
     for (let i = 1; i < n; i++) {
         ranges.push(
-            generate_datetime_range(n, i, updateConfig(i, handleNew), updateConfig(i, handleClose))
+            generate_datetime_range(n, i, updateConfig(i, handleClose))
         )
     }
     return ranges
@@ -57,13 +59,17 @@ export default function DateTimeRanges() {
             setConfig(newConfig)
         }
     }
+    let newAction = (<div className="datetime-range-new"><a href={"javascript:void(0);"} onClick={function () {
+        let newConfig = handleNew(config)
+        setConfig(newConfig)
+    }}>{plusMark}</a></div>)
     let out = (
         <div className={"datetime-ranges-container"}>
             <div className={"datetime-ranges-header"} key={"datetime-ranges-header"}>
                 <h5>Datetime filters</h5>
                 <p>Data will only be considered if the data was created within all of these Datetime ranges.</p>
+                {newAction}
             </div>
-            {generate_datetime_range(n, 0, updateConfig(0, handleNew), updateConfig(0, handleClose))}
             {generate_datetime_ranges(n, updateConfig)}
         </div>
     )

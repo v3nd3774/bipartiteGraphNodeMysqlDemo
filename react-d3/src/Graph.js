@@ -347,7 +347,31 @@ export default function Graph () {
     d3.select("div.container").html(stringToInject)
     var reactData;
     var api_url = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/${config.data.api.endpoint}`
-    var filterObj = {"LHSThresh": config.filterConf.leftRenderThreshold, "RHSThresh": config.filterConf.rightRenderThreshold}
+    var filterObj = {
+            "LHSThresh": config.filterConf.leftRenderThreshold,
+            "RHSThresh": config.filterConf.rightRenderThreshold,
+            "OmitSkip": config.filterConf.omitSkip,
+            "TimeFilters": JSON.stringify({
+                "time_filters": config.filterConf.timeRanges.map(
+                    function (range) {
+                        return {
+                            "start": range[0],
+                            "end": range[1]
+                        }
+                    }
+                )
+            }),
+            "DateTimeFilters": JSON.stringify({
+                "datetime_filters": config.filterConf.datetimeRanges.map(
+                    function (range) {
+                        return {
+                            "start": range[0],
+                            "end": range[1]
+                        }
+                    }
+                )
+            }),
+        }
     var filterQueryStr = Object.entries(filterObj).map(([key, value]) => `${key}=${value}`).join('&')
     var api_url = `${api_url}?${filterQueryStr}`
     if(config.data.api.request == "GET") {
@@ -368,9 +392,7 @@ export default function Graph () {
           MYSQL_LABELEE_ID_COLUMN: config.data.db.labeleeIdCol,
           MYSQL_LABELEE_CONTENT_COLUMN: config.data.db.labeleeContentCol ,
           MYSQL_TIME_COLUMN: config.data.db.timeCol,
-          MYSQL_OUTPUT_TIME_FORMAT: config.data.db.timeOutFormat,
-          THRESHOLD_LHS: config.filterConf.leftRenderThreshold,
-          THRESHOLD_RHS: config.filterConf.rightRenderThreshold
+          MYSQL_OUTPUT_TIME_FORMAT: config.data.db.timeOutFormat
         })
       reactData = reactData
     }
@@ -391,14 +413,14 @@ export default function Graph () {
        d.setMinutes( parseInt( time[2]) || 0 );
        return d;
     }
-    const rawData = config.filterConf.omitSkip ? reactData.no_skip_data : reactData.data
+    const rawData = reactData.data
     const dataForConsideration = rawData.map(function (d) {
         var out = {}
         for(var k in d) out[k] = d[k]
         out['timeParsed'] = new Date(out['time'])
         return out
-    }).filter(genTRFilter(config)).filter(genDTRFilter(config))
-    const summaryData = config.filterConf.omitSkip ? reactData.no_skip_summary_stats : reactData.summary_stats
+    })
+    const summaryData =  reactData.summary_stats
     drawReact(
         createLayoutData(
             dataForConsideration,
