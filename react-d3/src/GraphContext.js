@@ -53,7 +53,6 @@ export function subtractOneDay(date) {
             ["00:00:00", "23:59:59"]
         ],
         datetimeRanges: [
-            [subtractOneYear(new Date()), new Date()]
         ],
         leftRenderThreshold: 10,
         rightRenderThreshold: 10,

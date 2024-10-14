@@ -18,7 +18,7 @@ export default function SummaryStats () {
 
         let isLoading = !((! isEmpty(config.response)) && (! isEmpty(config.response.summary_stats)))
 
-        var data = !isLoading  ? (config.filterConf.omitSkip ? config.response.no_skip_summary_stats: config.response.summary_stats) : {
+        var data = !isLoading ? config.response.summary_stats : {
             "edge_cnt": 1,
             "unique_node_set_size": {"LHS": 1, "RHS":1},
             "unique_node_cnts": {
