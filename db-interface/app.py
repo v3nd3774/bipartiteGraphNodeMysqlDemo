@@ -10,6 +10,7 @@ from functools import reduce
 from typing import Dict, List, TypeAlias, Final, Any, Literal, Sequence, Mapping
 from typing_extensions import TypedDict
 from flask import Response, request, Flask
+from typeguard import check_type
 from flask_caching import Cache
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -132,6 +133,17 @@ SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
     "unique_node_set_size": Mapping[Literal["LHS", "RHS"], int],
     "unique_node_cnts": Mapping[Literal["LHS", "RHS"], Sequence[UniqueNodeCnt]]
 })
+
+@cache.memoize()
+def run_query(query: str) -> List[RawRowType]:
+    """ Runs a query and returns the results. """
+    with engine.connect() as connection:
+        result: List[RawRowType] = [
+            r._asdict()
+            for r in connection.execute(text(query))
+        ]
+    return result
+
 def row_jsonifier_simple( # pylint: disable=too-many-arguments
     row: RawRowType,
     source_col: str = config['MYSQL_LABELER_COLUMN'],
@@ -213,9 +225,7 @@ def calculate_summary_stats(data: Sequence[RowType]) -> SummaryStatsType:
 
 ReturnDataType: TypedDict = TypedDict("ReturnDataType", {
     "data": List[RowType],
-    "summary_stats": SummaryStatsType,
-    "no_skip_data": List[RowType],
-    "no_skip_summary_stats": SummaryStatsType
+    "summary_stats": SummaryStatsType
 })
 
 def determine_nodes_to_remove(data: Sequence[UniqueNodeCnt], thresh: int) -> Sequence[str]:
@@ -236,15 +246,69 @@ def remove_nodes(data: Sequence[RowType], lhs_to_remove: Sequence[str],
     ]
     return output_data
 
-def data_jsonifier(raw_data: List[RawRowType], skip_label: Any = 0, lhs_thresh: int = 0,
-                   rhs_thresh: int = 0) -> ReturnDataType:
+class TimeFilter(TypedDict):
+    """ One Time filter for data. HH:MM:SS """
+    start: tuple[int, int, int]
+    end: tuple[int, int, int]
+
+class TimeFilters(TypedDict):
+    """ One or more Time filters for data."""
+    time_filters: Sequence[TimeFilter]
+
+def string_to_time_tuple(x: str) -> tuple[int, int, int]:
+    """ Converts a string to a time tuple. """
+    date_obj: datetime.datetime = string_to_datetime(x)
+    return (date_obj.hour, date_obj.minute, date_obj.second)
+
+class RawDateTimeFilter(TypedDict):
+    """ One DateTime filter for data. YYYY-MM-DDTHH:MM:SS """
+    start: str
+    end: str
+
+class DateTimeFilter(TypedDict):
+    """ One DateTime filter for data. YYYY-MM-DDTHH:MM:SS """
+    start: datetime.datetime
+    end: datetime.datetime
+
+def string_to_datetime(x: str) -> datetime.datetime:
+    """ Converts a string to a datetime object. """
+    return datetime.datetime.strptime(x, "%Y-%m-%dT%H:%M:%S")
+
+class RawDateTimeFilters(TypedDict):
+    """ One or more DateTime filters for data. as strings"""
+    datetime_filters: Sequence[RawDateTimeFilter]
+
+class DateTimeFilters(TypedDict):
+    """ One or more DateTime filters for data. as datetime objects"""
+    datetime_filters: Sequence[DateTimeFilter]
+
+def raw_datetime_filters_to_datetime_filters(raw: RawDateTimeFilters) -> DateTimeFilters:
+    """ Converts raw datetime filters to datetime filters. """
+    return {
+        "datetime_filters": [
+            {
+                "start": string_to_datetime(x["start"]),
+                "end": string_to_datetime(x["end"])
+            } for x in raw["datetime_filters"]
+        ]
+    }
+
+def data_jsonifier(
+    raw_data: List[RawRowType],
+    skip_label: Any = 0,
+    lhs_thresh: int = 0,
+    rhs_thresh: int = 0,
+    time_filters: TimeFilters | None = None,
+    datetime_filters: DateTimeFilters | None = None,
+    no_skip: bool = False
+    ) -> ReturnDataType:
     """
     Applies jsonifier to raw data to organize in consistent format.
     Also calculates and includes summary stats in this format.
     """
     data: Sequence[RowType] = [row_jsonifier_simple(row) for row in raw_data]
-    summary_stats: SummaryStatsType = calculate_summary_stats(data)
     if lhs_thresh > 0 or rhs_thresh > 0:
+        summary_stats: SummaryStatsType = calculate_summary_stats(data)
         lhs_to_remove: Sequence[str] = []
         rhs_to_remove: Sequence[str] = []
         if lhs_thresh > 0:
@@ -256,47 +320,27 @@ def data_jsonifier(raw_data: List[RawRowType], skip_label: Any = 0, lhs_thresh: 
                 summary_stats["unique_node_cnts"]["RHS"], rhs_thresh
             )
         data = remove_nodes(data, lhs_to_remove, rhs_to_remove)
-        summary_stats = calculate_summary_stats(data)
-    no_skip_data: List[RowType] = [x for x in data if x['label'] != skip_label]
-    no_skip_summary_stats = calculate_summary_stats(no_skip_data)
+    if datetime_filters:
+        for dt_filter in datetime_filters["datetime_filters"]:
+            data = [
+                x for x in data
+                if dt_filter["start"] <= string_to_datetime(x["time"]) <= dt_filter["end"]
+            ]
+    if time_filters:
+        for t_filter in time_filters["time_filters"]:
+            data = [
+                x for x in data
+                if t_filter["start"] <= string_to_time_tuple(x["time"]) <= t_filter["end"]
+            ]
+    if no_skip:
+        data = [x for x in data if x['label'] != skip_label]
+    summary_stats = calculate_summary_stats(data)
     output_data = [row_jsonifier_enrich(record, summary_stats) for record in data]
     return {
         "data":output_data,
-        "summary_stats":summary_stats,
-        "no_skip_data":no_skip_data,
-        "no_skip_summary_stats":no_skip_summary_stats
+        "summary_stats":summary_stats
     }
 
-# this isn't working right for some reason
-@cache.memoize()
-def run_query(query: str) -> List[RawRowType]:
-    """ Runs a query and returns the results. """
-    with engine.connect() as connection:
-        result: List[RawRowType] = [
-            r._asdict()
-            for r in connection.execute(text(query))
-        ]
-    return result
-
-@app.route("/environ", methods=["GET", "OPTIONS"])
-@cache.cached(query_string=True)
-def serve_environ() -> Response:
-    """ Returns the row using the environment config to extract necessary data. """
-    r: Response = Response()
-    if request.method == "OPTIONS": # preflight
-        r.headers.add("Access-Control-Allow-Origin", "*")
-        r.headers.add('Access-Control-Allow-Headers', "*")
-        r.headers.add('Access-Control-Allow-Methods', "*")
-    else: # actual req
-        result: List[RawRowType] = run_query(config["MYSQL_JOIN_QUERY"])
-        lhs_thresh: int = int(request.args.get("LHSThresh", 0))
-        rhs_thresh: int = int(request.args.get("RHSThresh", 0))
-        data: ReturnDataType = data_jsonifier(result,
-                                              lhs_thresh=lhs_thresh,
-                                              rhs_thresh=rhs_thresh)
-        r = Response(response=json.dumps(data), status=200, mimetype="application/json")
-        r.headers.add("Access-Control-Allow-Origin", "*")
-    return r
 
 def check_query_safety(x: str) -> bool:
     """
@@ -342,9 +386,23 @@ def serve_custom() -> Response:
             result: List[RawRowType] = run_query(request_struct["MYSQL_JOIN_QUERY"])
             lhs_thresh: int = int(request.args.get("LHSThresh", 0))
             rhs_thresh: int = int(request.args.get("RHSThresh", 0))
+            no_skip: bool = bool(request.args.get("OmitSkip", 0))
+            time_filters_string: str = request.args.get("TimeFilters", "")
+            time_filters: TimeFilters = check_type("TimeFilters", json.loads(time_filters_string))
+            datetime_filters_string: str = request.args.get("DateTimeFilters", "")
+            raw_datetime_filters: RawDateTimeFilters = check_type(
+                "RawDateTimeFilters",
+                json.loads(datetime_filters_string)
+            )
+            datetime_filters: DateTimeFilters = raw_datetime_filters_to_datetime_filters(
+                raw_datetime_filters
+            )
             data: ReturnDataType = data_jsonifier(result,
                                                   lhs_thresh=lhs_thresh,
-                                                  rhs_thresh=rhs_thresh)
+                                                  rhs_thresh=rhs_thresh,
+                                                  time_filters=time_filters,
+                                                  datetime_filters=datetime_filters,
+                                                  no_skip=no_skip)
             r.set_data(json.dumps(data))
             r.status_code = 200
             r.mimetype = "application/json"
