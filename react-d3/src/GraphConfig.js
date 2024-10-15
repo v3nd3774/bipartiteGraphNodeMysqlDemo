@@ -209,10 +209,23 @@ class GraphConfig extends Component {
     )
   }
 
+
+
+
+
   render() {
     return (
     <>
-    <ShowModal />
+    <ShowModal
+        title={"Submitted Configuration!"}
+        body={"Please re-visit the tabs of interest to view with the new configuration."}
+        setShow={
+        ((cfg, sConf, show) => {
+            var newData = Object.assign({}, cfg.data, { submitSuccessModal: show })
+            var newConfig = Object.assign({}, cfg, {data: newData})
+            sConf(newConfig)
+        })}
+        configPath={['data', 'submitSuccessModal']} />
     <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
       <Button variant="primary col-sm-12 mb-3" type="submit">
         Submit

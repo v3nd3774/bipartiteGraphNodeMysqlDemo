@@ -2,6 +2,7 @@ import React, {useContext} from 'react';
 import { Loading } from './Loading';
 import { GraphContext } from './GraphContext';
 import './DataTable.css';
+import ShowModal from './ShowModal';
 import { genTRFilter, genDTRFilter } from './TimeFilters';
 import { CSVLink } from "react-csv";
 
@@ -460,8 +461,23 @@ export default function DataTable () {
       out['timeParsed'] = new Date(out['time'])
       return out
   }).filter(genTRFilter(config)).filter(genDTRFilter(config))
-
-  return isLoading ? (<Loading />) : (
-    <Table columns={columns} data={dataForConsideration} />
-  );
+    console.log("in DataTable")
+    console.log(config)
+  return (
+    <>
+        <ShowModal
+          title={"No Data"}
+          body={"No data to display."}
+          setShow={
+              ((cfg, sConf, show) => {
+                  var newData = Object.assign({}, cfg.data, { noDataModalTable: show })
+                  var newConfig = Object.assign({}, cfg, {data: newData})
+                  sConf(newConfig)
+              })}
+          configPath={["data", "noDataModalTable"]} />
+        {isLoading ? (<Loading />) : (
+         config.response.data.length == 0 ? (<p>No Data</p>) : (<Table columns={columns} data={dataForConsideration} />)
+        )}
+    </>
+  )
 }
