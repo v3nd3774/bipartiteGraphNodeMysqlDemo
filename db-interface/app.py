@@ -221,8 +221,14 @@ def calculate_summary_stats(data: Sequence[RowType]) -> SummaryStatsType:
         ]
     }
 
-    min_date: datetime.datetime = min([string_to_datetime(x["time"], datefmt=datefmt_two) for x in data]) - datetime.timedelta(days=1)
-    max_date: datetime.datetime = max([string_to_datetime(x["time"], datefmt=datefmt_two) for x in data]) + datetime.timedelta(days=1)
+    try:
+        min_date: datetime.datetime = min([string_to_datetime(x["time"], datefmt=datefmt_two) for x in data]) - datetime.timedelta(days=1)
+        max_date: datetime.datetime = max([string_to_datetime(x["time"], datefmt=datefmt_two) for x in data]) + datetime.timedelta(days=1)
+    except ValueError as e:
+        print(e)
+        print("Data is empty, setting min and max date to current date...")
+        min_date = datetime.datetime.now()
+        max_date = min_date
 
     return {
         "edge_cnt": edge_cnt,

@@ -40,7 +40,10 @@ export function subtractOneDay(date) {
       endpoint: "environ",
       getorPost: true
     },
-    submitSuccessModal: false
+    submitSuccessModal: false,
+    noDataModal: false,
+    noDataModalTable: false,
+    noDataModalSummary: false
   },
   response: {},
   sortingConf: {

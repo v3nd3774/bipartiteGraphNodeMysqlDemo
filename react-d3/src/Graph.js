@@ -1,6 +1,7 @@
 import { renderToString } from 'react-dom/server'
 import React, {useContext, useState, useEffect, useMemo} from 'react';
 import * as d3 from "d3";
+import ShowModal from './ShowModal'
 import axios from 'axios';
 import { GraphContext } from './GraphContext';
 import { Loading } from './Loading';
@@ -401,36 +402,44 @@ export default function Graph () {
     // purge elements from being rendered that have less than 10 targets
     const svg = d3.select("div.container > svg")
     svg.selectAll("*").remove()
-    setConfig(updateConfig("response", reactData, config))
-    //console.log("Storing data")
-    //console.log(config)
+    if (reactData.data.length == 0) {
+            console.log("No data to display")
+            var newData = Object.assign({}, config.data, { noDataModal: true, noDataModalTable: true, noDataModalSummary: true})
+            var newResponse = Object.assign({}, config.response, { noData: true })
+            var newConfig = Object.assign({}, config, {data: newData})
+            setConfig(updateConfig("response", reactData, newConfig))
+    } else {
+        setConfig(updateConfig("response", reactData, config))
+        //console.log("Storing data")
+        //console.log(config)
 
-    function parseTime( t ) {
-       //https://stackoverflow.com/a/141504
-       var d = new Date();
-       var time = t.match( /(\d+)(?::(\d\d))?\s*(p?)/ );
-       d.setHours( parseInt( time[1]) + (time[3] ? 12 : 0) );
-       d.setMinutes( parseInt( time[2]) || 0 );
-       return d;
-    }
-    const rawData = reactData.data
-    const dataForConsideration = rawData.map(function (d) {
-        var out = {}
-        for(var k in d) out[k] = d[k]
-        out['timeParsed'] = new Date(out['time'])
-        return out
-    })
-    const summaryData =  reactData.summary_stats
-    drawReact(
-        createLayoutData(
+        function parseTime( t ) {
+           //https://stackoverflow.com/a/141504
+           var d = new Date();
+           var time = t.match( /(\d+)(?::(\d\d))?\s*(p?)/ );
+           d.setHours( parseInt( time[1]) + (time[3] ? 12 : 0) );
+           d.setMinutes( parseInt( time[2]) || 0 );
+           return d;
+        }
+        const rawData = reactData.data
+        const dataForConsideration = rawData.map(function (d) {
+            var out = {}
+            for(var k in d) out[k] = d[k]
+            out['timeParsed'] = new Date(out['time'])
+            return out
+        })
+        const summaryData =  reactData.summary_stats
+        drawReact(
+            createLayoutData(
+                dataForConsideration,
+                summaryData,
+                false
+            ),
+            undefined,
             dataForConsideration,
-            summaryData,
-            false
-        ),
-        undefined,
-        dataForConsideration,
-        summaryData
-    )
+            summaryData
+        )
+    }
   }
 
   useEffect(()=>{
@@ -444,6 +453,16 @@ export default function Graph () {
 
   return (
   <div className="container">
+  <ShowModal
+    title={"No Data"}
+    body={"No data to display."}
+    setShow={
+        ((cfg, sConf, show) => {
+            var newData = Object.assign({}, cfg.data, { noDataModal: show })
+            var newConfig = Object.assign({}, cfg, {data: newData})
+            sConf(newConfig)
+        })}
+    configPath={["data", "noDataModal"]} />
     <svg />
   </div>
   )

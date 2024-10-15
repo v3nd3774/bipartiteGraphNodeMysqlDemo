@@ -34,9 +34,10 @@ function retrieveEndDatetime(id, config) {
     return retrieveDatetime(id, config, 1)
 }
 
-function isValidDate(currentDate, selectedDate) {
-    let oneYearAndOneDayAgo = subtractOneDay(subtractOneYear(new Date()))
-    return currentDate.isAfter(oneYearAndOneDayAgo) && currentDate.isBefore(new Date())
+function isValidDate(currentDate, selectedDate, config) {
+    let minDate = new Date(config.response.summary_stats.min_date)
+    let maxDate = new Date(config.response.summary_stats.max_date)
+    return currentDate.isAfter(minDate) && currentDate.isBefore(maxDate)
 }
 
 function generateDatetimePicker(isStart, updateConfig, id, config) {
@@ -45,7 +46,7 @@ function generateDatetimePicker(isStart, updateConfig, id, config) {
     return (<Datetime
         onChange={changeFn}
         value={value}
-        isValidDate={isValidDate}
+        isValidDate={(currentDate, selectedDate) => isValidDate(currentDate, selectedDate, config)}
     />)
 }
 

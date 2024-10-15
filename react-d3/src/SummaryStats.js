@@ -2,6 +2,7 @@
 import React, {useContext, useEffect, useMemo} from 'react';
 import { GraphContext } from './GraphContext';
 import { isEmpty } from './DataTable'
+import ShowModal from './ShowModal';
 import { Loading } from './Loading';
 import { renderToString } from 'react-dom/server'
 import './SummaryStats.css';
@@ -16,7 +17,7 @@ export default function SummaryStats () {
 
         let stringToInject = renderToString(<Loading/>)
 
-        let isLoading = !((! isEmpty(config.response)) && (! isEmpty(config.response.summary_stats)))
+        let isLoading = !((! isEmpty(config.response)) && (! isEmpty(config.response.summary_stats))) || config.data.noDataModalSummary
 
         var data = !isLoading ? config.response.summary_stats : {
             "edge_cnt": 1,
@@ -312,20 +313,31 @@ export default function SummaryStats () {
     }, [
         config.response,
         config.response.summary_stats,
-        config.filterConf.omitSkip
+        config.filterConf.omitSkip,
     ])
 
-    return (
-        <div className="summary-container">
-            <div className="edge-cnt"> </div>
-            <div className="lhs-node-set-cnt"> </div>
-            <div className="rhs-node-set-cnt"> </div>
-            <div className="lhs-node-unique-cnts">
 
+    return (
+        <>
+            <ShowModal
+              title={"No Data"}
+              body={"No data to display."}
+              setShow={
+                  ((cfg, sConf, show) => {
+                      var newData = Object.assign({}, cfg.data, { noDataModalSummary: show })
+                      var newConfig = Object.assign({}, cfg, {data: newData})
+                      sConf(newConfig)
+                  })}
+              configPath={["data", "noDataModalSummary"]} />
+            <div className="edge-cnt"> </div>
+            <div className="summary-container">
+                <div className="lhs-node-set-cnt"> </div>
+                <div className="rhs-node-set-cnt"> </div>
+                <div className="lhs-node-unique-cnts"> </div>
+                <div className="rhs-node-unique-cnts">
+                    <div className="rhs-node-unique-cnts-dropdown"> </div>
+                </div>
             </div>
-            <div className="rhs-node-unique-cnts">
-                <div className="rhs-node-unique-cnts-dropdown"> </div>
-            </div>
-        </div>
+        </>
     )
 }

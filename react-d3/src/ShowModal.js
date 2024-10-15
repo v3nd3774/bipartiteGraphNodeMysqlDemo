@@ -2,27 +2,23 @@
 import React, { useContext } from "react";
 import { Modal, Button } from "react-bootstrap";
 import { defaults, GraphContext } from './GraphContext';
-function ShowModal() {
+function ShowModal({title, body, setShow, configPath}) {
     const contextType = GraphContext
     const context = useContext(contextType)
     const [config, setConfig] = context
 
-    const setShow = (show) => {
-        var newData = Object.assign({}, config.data, { submitSuccessModal: show })
-        var newConfig = Object.assign({}, config, {data: newData})
-        setConfig(newConfig)
-    }
+    let show_modal_value = configPath.reduce((acc, val) => acc[val], config)
 
-    const handleClose = () => setShow(false);
+    const handleClose = () => setShow(config, setConfig, false);
 
     return (
-        <Modal show={config.data.submitSuccessModal} onHide={handleClose}>
+        <Modal show={show_modal_value} onHide={handleClose}>
             <Modal.Header closeButton>
-                <Modal.Title>Submitted Configuration!</Modal.Title>
+                <Modal.Title>{title}</Modal.Title>
             </Modal.Header>
 
             <Modal.Body>
-                <p>Please re-visit the tabs of interest to view with the new configuration.</p>
+                <p>{body}</p>
             </Modal.Body>
         </Modal>
     );
