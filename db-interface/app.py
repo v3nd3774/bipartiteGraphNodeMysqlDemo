@@ -6,6 +6,7 @@ import sys
 import copy
 import json
 import datetime
+import pandas as pd
 from functools import reduce
 from typing import Dict, List, TypeAlias, Final, Any, Literal, Sequence, Mapping
 from typing_extensions import TypedDict
@@ -341,7 +342,7 @@ def data_jsonifier(
     Applies jsonifier to raw data to organize in consistent format.
     Also calculates and includes summary stats in this format.
     """
-    data: Sequence[RowType] = [row_jsonifier_simple(row) for row in raw_data]
+    data: Sequence[RowType] = [row_jsonifier_simple(row, ) for row in raw_data]
     summary_stats: SummaryStatsType = calculate_summary_stats(data)
     min_date: str = summary_stats["min_date"]
     max_date: str = summary_stats["max_date"]
@@ -521,6 +522,88 @@ def serve_environ() -> Response:
         r = Response(response=json.dumps(data), status=200, mimetype="application/json")
         r.headers.add("Access-Control-Allow-Origin", "*")
     return r
+
+def csv_to_array_of_dictionaries(file_path: str) -> List[RawRowType]:
+  """Reads a CSV file into an array of dictionaries.
+
+  Args:
+    file_path: The path to the CSV file.
+
+  Returns:
+    A list of dictionaries, where each dictionary represents a row
+    in the CSV file and keys are taken from the header row.
+    Returns an empty list if the file is not found or an error occurs.
+  """
+  try:
+    df = pd.read_csv(file_path)
+    intermed = df.to_dict('records')
+    return [{**item, 'time': datetime.datetime.strptime(item['time'], "%Y-%m-%d %H:%M:%S")} for item in intermed]
+  except FileNotFoundError:
+    print(f"Error: File not found at {file_path}")
+    return []
+  except pd.errors.EmptyDataError:
+    print(f"Error: Empty CSV file at {file_path}")
+    return []
+  except Exception as e:
+    print(f"An error occurred: {e}")
+    return []
+
+@app.route("/testingsample", methods=["GET", "OPTIONS"])
+@cache.cached(query_string=True)
+def serve_environ_sample() -> Response:
+    """ Returns the row using the environment config to extract necessary data. """
+    r: Response = Response()
+    if request.method == "OPTIONS": # preflight
+        r.headers.add("Access-Control-Allow-Origin", "*")
+        r.headers.add('Access-Control-Allow-Headers', "*")
+        r.headers.add('Access-Control-Allow-Methods', "*")
+    else: # actual req
+        file_path = os.environ["CSV_SAMPLE_FILEPATH"]
+        result: List[RawRowType] = csv_to_array_of_dictionaries(file_path)
+        # must configure thresholds to 0 in the configuration table manually when using the
+        # testingsample endpoint
+        lhs_thresh: int = int(request.args.get("LHSThresh", 0))
+        rhs_thresh: int = int(request.args.get("RHSThresh", 0))
+        no_skip: bool = bool(request.args.get("OmitSkip", 0))
+        time_filters_string: str = request.args.get("TimeFilters", "{}")
+        untyped_time_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(time_filters_string)
+        raw_t_filters: Sequence[RawTimeFilter] = []
+        for x in untyped_time_filters.get("time_filters", []):
+            assert "start" in x, "Time filter must have start"
+            assert "end" in x, "Time filter must have end"
+            typed_time_filter: RawTimeFilter = {
+                "start": x["start"],
+                "end": x["end"]
+            }
+            raw_t_filters = [*raw_t_filters, typed_time_filter]
+        raw_time_filters: RawTimeFilters = { "time_filters": raw_t_filters }
+        time_filters: TimeFilters = raw_time_filters_to_time_filters(raw_time_filters)
+        datetime_filters_string: str = request.args.get("DateTimeFilters", "{}")
+        untyped_datetime_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(datetime_filters_string)
+        raw_dt_filters: Sequence[RawDateTimeFilter] = []
+        for x in untyped_datetime_filters.get("datetime_filters", []):
+            assert "start" in x, "DateTime filter must have start"
+            assert "end" in x, "DateTime filter must have end"
+            typed_datetime_filter: RawDateTimeFilter = {
+                "start": x["start"],
+                "end": x["end"]
+            }
+            raw_dt_filters = [*raw_dt_filters, typed_datetime_filter]
+        raw_datetime_filters: RawDateTimeFilters = {"datetime_filters": raw_dt_filters}
+        datetime_filters: DateTimeFilters = raw_datetime_filters_to_datetime_filters(
+            raw_datetime_filters
+        )
+        data: ReturnDataType = data_jsonifier(result,
+                                              lhs_thresh=lhs_thresh,
+                                              rhs_thresh=rhs_thresh,
+                                              time_filters=time_filters,
+                                              datetime_filters=datetime_filters,
+                                              no_skip=no_skip)
+
+        r = Response(response=json.dumps(data), status=200, mimetype="application/json")
+        r.headers.add("Access-Control-Allow-Origin", "*")
+    return r
+
 
 
 

@@ -11,3 +11,4 @@ opentelemetry-instrumentation-sqlalchemy==0.43b0
 opentelemetry-exporter-otlp==1.22.0
 opentelemetry-instrumentation-flask==0.43b0
 typeguard==4.3.0
+pandas==2.2.3
