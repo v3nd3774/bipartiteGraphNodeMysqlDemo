@@ -179,10 +179,21 @@ export default function Graph () {
       .attr('opacity', 0.5)
       .attr('fill', 'none')
       .attr('stroke', d =>
+             // This section is for CLAIM MATCHING data
+             d.original.label == 3 ? "red" :
+             d.original.label == 4 ? "blue" :
+             d.original.label == 5 ? "purple" :
+             d.original.label == 6 ? "green" :
+             d.original.label == 7 ? "orange" :
+             d.original.label == 8 ? "teal" :
+             d.original.label == 9 ? "black" :
+             // End of CLAIM MATCHING data
+             // start of section for claimbuster label data
              d.original.label == -1 ? "red" :
              d.original.label == -2 ? "purple" :
              d.original.label ==  1 ? "green" :
                "yellow" // zero here
+             // end of section for claimbuster label data
       )
           .attr('stroke-width', d => d.thickness);
     // source node rectangles
