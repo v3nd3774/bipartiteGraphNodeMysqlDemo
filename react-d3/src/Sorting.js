@@ -36,15 +36,56 @@ function targetNumericalIdSort (a, b) {
 function reverseSortResult (a, b, cmp) {
     return cmp(a, b) * -1;
 }
+
+function targetAritySort (a, b) {
+
+  const aLabels = a.values.map(d => (d.original.label ? d.original.label : 'ERROR NO LABEL DATA').toString());
+  const bLabels = b.values.map(d => (d.original.label ? d.original.label : 'ERROR NO LABEL DATA').toString());
+  const aFreqs = freqs(aLabels);
+  const bFreqs = freqs(bLabels);
+  // https://www.30secondsofcode.org/js/s/most-frequent-array-element/#:~:text=1%20Use%20Array.prototype.reduce%20%28%29%20to%20map%20unique%20values,get%20the%20most%20frequent%20value%20in%20the%20array.
+  const aTotal = Object.values(aFreqs).reduce(
+      (acc, count) => acc + count,
+      0
+  );
+  const bTotal = Object.values(bFreqs).reduce(
+      (acc, count) => acc + count,
+      0
+  );
+  return aTotal - bTotal;
+}
+
+function labelerAritySort (a, b) {
+
+  const aSources = a.values.map(d => (d.original.source ? d.original.source : 'ERROR NO SOURCE DATA').toString());
+  const bSources = b.values.map(d => (d.original.source ? d.original.source : 'ERROR NO SOURCE DATA').toString());
+  const aFreqs = freqs(aSources);
+  const bFreqs = freqs(bSources);
+  // https://www.30secondsofcode.org/js/s/most-frequent-array-element/#:~:text=1%20Use%20Array.prototype.reduce%20%28%29%20to%20map%20unique%20values,get%20the%20most%20frequent%20value%20in%20the%20array.
+  const aTotal = Object.values(aFreqs).reduce(
+      (acc, count) => acc + count,
+      0
+  );
+  const bTotal = Object.values(bFreqs).reduce(
+      (acc, count) => acc + count,
+      0
+  );
+  return aTotal - bTotal;
+}
+
 export const lhsAvailibleSorting = {
     "alphabetical labeler": sourceAlphabeticalSort,
     "reverse alphabetical labeler": (a, b) => reverseSortResult(a, b, sourceAlphabeticalSort),
     "ascending labeler quality score": sourceQualitySort,
-    "descending labeler quality score": (a, b) => reverseSortResult(a, b, sourceQualitySort)
+    "descending labeler quality score": (a, b) => reverseSortResult(a, b, sourceQualitySort),
+    "labeler arity": labelerAritySort,
+    "reverse labeler arity": (a, b) => reverseSortResult(a,b,labelerAritySort),
 }
 export const rhsAvailibleSorting = {
     "numerical id": targetNumericalIdSort,
     "reverse numerical id": (a, b) => reverseSortResult(a, b, targetNumericalIdSort),
     "label consensus": targetLabelSort,
+    "label arity": targetAritySort,
+    "reverse label arity": (a, b) => reverseSortResult(a,b,targetAritySort),
     "reverse label consensus":  (a, b) => reverseSortResult(a, b, targetLabelSort)
 }

@@ -74,16 +74,24 @@ export default function Graph () {
        .style("opacity", _ =>
          0
        )
+    const originLabels = []
+    d3.select("svg").selectAll("g path")
+        .filter(d => {
+            return d.source == i.key
+        })
+        .each(
+            function(d, _) {
+                originLabels.push(d);
+            }
+        )
+    const colorScale = getColorScheme(originLabels);
      d3.select("svg").selectAll("g path")
        .filter(d => {
          return d.source == i.key
        })
        .transition()
        .style("stroke", d =>
-             d.original.label == -1 ? "red" :
-             d.original.label == -2 ? "purple" :
-             d.original.label ==  1 ? "green" :
-               "yellow" // zero here
+             colorScale(d.original.label)
        )
        .style("stroke-width", d =>
          1.01010101010101010102
@@ -93,14 +101,22 @@ export default function Graph () {
        )
   }
   function stopDoSthTgt (g, i, els, rawData, svg) {
+     const originLabels = []
+     d3.select("svg").selectAll("g path")
+         .filter(d => {
+             return d.source == i.key
+         })
+         .each(
+             function(d, _) {
+                 originLabels.push(d);
+             }
+         )
+     const colorScale = getColorScheme(originLabels);
      const all = d3.select("svg").selectAll("g path")
        all
        .transition()
        .style("stroke", d =>
-             d.original.label == -1 ? "red" :
-             d.original.label == -2 ? "purple" :
-             d.original.label ==  1 ? "green" :
-               "yellow" // zero here
+             colorScale(d.original.label)
        )
        .style("stroke-width", d =>
          1.01010101010101010102
@@ -110,6 +126,17 @@ export default function Graph () {
        )
   }
   function doSthTgt (g, i, els, rawData, svg) {
+     const originLabels = []
+     d3.select("svg").selectAll("g path")
+         .filter(d => {
+             return d.source == i.key
+         })
+         .each(
+             function(d, _) {
+                 originLabels.push(d);
+             }
+         )
+     const colorScale = getColorScheme(originLabels);
      const all = d3.select("svg").selectAll("g path")
        all
        .filter(d => {
@@ -131,10 +158,7 @@ export default function Graph () {
        })
        .transition()
        .style("stroke", d =>
-             d.original.label == -1 ? "red" :
-             d.original.label == -2 ? "purple" :
-             d.original.label ==  1 ? "green" :
-               "yellow" // zero here
+             colorScale(d.original.label)
        )
        .style("stroke-width", d =>
          1.01010101010101010102
@@ -143,6 +167,16 @@ export default function Graph () {
          0.5
        )
   }
+
+  function getColorScheme(originLabels) {
+    const uniqueLabels = [...new Set(originLabels)];
+    const colorScheme = d3.schemeTableau10;
+    const colorScale = d3.scaleOrdinal()
+        .domain(uniqueLabels)
+        .range(colorScheme);
+    return colorScale;
+  }
+
   function drawReact(layoutData, filterKey, rawData, summaryData, margin = {left: 0, right: 0}) {
     // clear the svg
     d3.select("div.container").selectAll("*").remove()
@@ -170,6 +204,10 @@ export default function Graph () {
       summaryData,
       false
     );
+
+    const originLabels = flows.map(flow => flow.original.label)
+    const colorScale = getColorScheme(originLabels);
+
     // flow lines
     let lines = container.append('g')
       .selectAll('path')
@@ -179,21 +217,7 @@ export default function Graph () {
       .attr('opacity', 0.5)
       .attr('fill', 'none')
       .attr('stroke', d =>
-             // This section is for CLAIM MATCHING data
-             d.original.label == 3 ? "red" :
-             d.original.label == 4 ? "blue" :
-             d.original.label == 5 ? "purple" :
-             d.original.label == 6 ? "green" :
-             d.original.label == 7 ? "orange" :
-             d.original.label == 8 ? "teal" :
-             d.original.label == 9 ? "black" :
-             // End of CLAIM MATCHING data
-             // start of section for claimbuster label data
-             d.original.label == -1 ? "red" :
-             d.original.label == -2 ? "purple" :
-             d.original.label ==  1 ? "green" :
-               "yellow" // zero here
-             // end of section for claimbuster label data
+             colorScale(d.original.label)
       )
           .attr('stroke-width', d => d.thickness);
     // source node rectangles
@@ -206,10 +230,7 @@ export default function Graph () {
       .attr('width', nodeWidth)
       .attr('height', d => d.start.height)
       .attr('fill', d =>
-             d.original.label == -1 ? "red" :
-             d.original.label == -2 ? "purple" :
-             d.original.label ==  1 ? "green" :
-               "yellow" // zero here
+             colorScale(d.original.label)
       )
       .attr('stroke', 'none');
     // target node rectangles
@@ -222,10 +243,7 @@ export default function Graph () {
       .attr('width', nodeWidth)
       .attr('height', d => d.end.height)
       .attr('fill', d =>
-             d.original.label == -1 ? "red" :
-             d.original.label == -2 ? "purple" :
-             d.original.label ==  1 ? "green" :
-               "yellow" // zero here
+             colorScale(d.original.label)
       )
       .attr('stroke', 'none');
     // source labels
