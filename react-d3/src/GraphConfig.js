@@ -226,12 +226,8 @@ class GraphConfig extends Component {
             sConf(newConfig)
         })}
         configPath={['data', 'submitSuccessModal']} />
-    <Form className="form-horizontal row" onSubmit={this.handleSubmit}>
-      <Button variant="primary col-sm-12 mb-3" type="submit">
-        Submit
-      </Button>
-
-      <Form.Group className="col-sm-5" controlId="formLhsSort">
+    <Form className="form-horizontal row justify-content-center" onSubmit={this.handleSubmit}>
+      <Form.Group className="col-sm-2" controlId="formLhsSort">
         <Form.Label>Sorting for left hand side</Form.Label>
         <Form.Select
           onChange={this.updateLhs}>
@@ -242,7 +238,7 @@ class GraphConfig extends Component {
         </Form.Select>
       </Form.Group>
 
-      <Form.Group className="col-sm-5" controlId="formRhsSort">
+      <Form.Group className="col-sm-2" controlId="formRhsSort">
         <Form.Label>Sorting for right hand side</Form.Label>
         <Form.Select
           onChange={this.updateRhs}>
@@ -251,6 +247,25 @@ class GraphConfig extends Component {
            .map(key => <option value={key}>{key}</option>)
         }
         </Form.Select>
+      </Form.Group>
+
+      <Form.Group className="col-sm-2" controlId="formThresholdLHS">
+        <Form.Label>Threshold for LHS rendering</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder="Threshold value HERE"
+          value={this.state ? this.state.filterConf.leftRenderThreshold : ""}
+          onChange={this.updateLHSThreshold}
+        />
+      </Form.Group>
+      <Form.Group className="col-sm-2" controlId="formThresholdRHS">
+        <Form.Label>Threshold for RHS rendering</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder="Threshold value HERE"
+          value={this.state ? this.state.filterConf.rightRenderThreshold : ""}
+          onChange={this.updateRHSThreshold}
+        />
       </Form.Group>
 
       <Form.Group className="col-sm-2" controlId="formOmitSkip">
@@ -264,6 +279,8 @@ class GraphConfig extends Component {
         </Form.Label>
         {this.determineWhichCheckboxToUse()}
       </Form.Group>
+
+      <div class="w-100"></div>
 
       <Form.Group className="col-sm-2" controlId="formDb">
         <Form.Label>Database</Form.Label>
@@ -314,7 +331,8 @@ class GraphConfig extends Component {
         />
       </Form.Group>
 
-      <Form.Group className="col-sm-12 mb-3" controlId="formJoinQuery">
+      <div class="w-100"></div>
+      <Form.Group className="col-sm-6 mb-6" controlId="formJoinQuery">
         <Form.Label>Join Query</Form.Label>
         <Form.Control
           type="text"
@@ -324,7 +342,7 @@ class GraphConfig extends Component {
         />
       </Form.Group>
 
-      <Form.Group className="col-sm-6" controlId="formTimeCol">
+      <Form.Group className="col-sm-2" controlId="formTimeCol">
         <Form.Label>Time Column</Form.Label>
         <Form.Control
           type="text"
@@ -334,7 +352,7 @@ class GraphConfig extends Component {
         />
       </Form.Group>
 
-      <Form.Group className="col-sm-6" controlId="formTimeOutCol">
+      <Form.Group className="col-sm-2" controlId="formTimeOutCol">
         <Form.Label>Time Output Format</Form.Label>
         <Form.Control
           type="text"
@@ -343,6 +361,7 @@ class GraphConfig extends Component {
           onChange={this.updateTimeOut}
         />
       </Form.Group>
+      <div class="w-100"></div>
       <Form.Group className="col-sm-1" controlId="formApiGetOrPost">
         <Form.Label>API {this.state ? (this.state.data.api.request ? "GET" : "POST") : "GET"} Request</Form.Label>
         <Form.Check
@@ -351,7 +370,7 @@ class GraphConfig extends Component {
           onChange={this.updateApiGetOrPost}
         />
       </Form.Group>
-      <Form.Group className="col-sm-2" controlId="formApiProtocol">
+      <Form.Group className="col-sm-1" controlId="formApiProtocol">
         <Form.Label>API Protocol</Form.Label>
         <Form.Control
           type="text"
@@ -360,7 +379,7 @@ class GraphConfig extends Component {
           onChange={this.updateApiProtocol}
         />
       </Form.Group>
-      <Form.Group className="col-sm-3" controlId="formApiProtocol">
+      <Form.Group className="col-sm-1" controlId="formApiProtocol">
         <Form.Label>API Host</Form.Label>
         <Form.Control
           type="text"
@@ -369,7 +388,7 @@ class GraphConfig extends Component {
           onChange={this.updateApiHost}
         />
       </Form.Group>
-      <Form.Group className="col-sm-3" controlId="formApiPort">
+      <Form.Group className="col-sm-1" controlId="formApiPort">
         <Form.Label>API Port</Form.Label>
         <Form.Control
           type="text"
@@ -378,7 +397,7 @@ class GraphConfig extends Component {
           onChange={this.updateApiPort}
         />
       </Form.Group>
-      <Form.Group className="col-sm-3" controlId="formApiEndpoint">
+      <Form.Group className="col-sm-1" controlId="formApiEndpoint">
         <Form.Label>API Endpoint</Form.Label>
         <Form.Control
           type="text"
@@ -387,24 +406,11 @@ class GraphConfig extends Component {
           onChange={this.updateApiEndpoint}
         />
       </Form.Group>
-      <Form.Group className="col-sm-6" controlId="formThresholdLHS">
-        <Form.Label>Threshold for LHS rendering</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="Threshold value HERE"
-          value={this.state ? this.state.filterConf.leftRenderThreshold : ""}
-          onChange={this.updateLHSThreshold}
-        />
-      </Form.Group>
-      <Form.Group className="col-sm-6" controlId="formThresholdRHS">
-        <Form.Label>Threshold for RHS rendering</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="Threshold value HERE"
-          value={this.state ? this.state.filterConf.rightRenderThreshold : ""}
-          onChange={this.updateRHSThreshold}
-        />
-      </Form.Group>
+
+      <div class="w-100"></div>
+      <Button variant="primary col-sm-3 mb-3" type="submit">
+        Submit
+      </Button>
     </Form>
     </>
     )
