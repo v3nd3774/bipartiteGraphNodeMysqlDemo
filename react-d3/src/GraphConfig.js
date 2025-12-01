@@ -40,6 +40,7 @@ class GraphConfig extends Component {
     this.updateRHSThreshold = this.updateRHSThreshold.bind(this)
     this.updateLHSThreshold = this.updateLHSThreshold.bind(this)
     this.updateThreshold = this.updateThreshold.bind(this)
+    this.updateTargetSampleDataset = this.updateTargetSampleDataset.bind(this)
   }
 
   determineWhichCheckboxToUse() {
@@ -117,6 +118,12 @@ class GraphConfig extends Component {
 
   updateLHSThreshold(event) {
     this.updateThreshold(event, "leftRenderThreshold")
+  }
+
+  updateTargetSampleDataset(event) {
+    const [config, _] = this.context
+    config.targetsampledataset = event.target.value
+    this.setState(config)
   }
 
   updateSubmitSuccessModal() {
@@ -405,6 +412,21 @@ class GraphConfig extends Component {
           value={this.state ? this.state.data.api.endpoint : ""}
           onChange={this.updateApiEndpoint}
         />
+      </Form.Group>
+
+      <Form.Group className="col-sm-1" controlId="formTargetSampleDataset">
+        <Form.Label>Target Sample Dataset (only used with /testingsample endpoint)</Form.Label>
+        <Form.Select
+          value={this.state ? this.state.targetsampledataset : ""}
+          placeholder="Select Dataset to visualize"
+          onChange={this.updateTargetSampleDataset}
+        >
+        {this.state ? this.state.sampledatasetnames.map(name =>
+            <option key={name} value={name}>
+                {name}
+            </option>
+        ) : "n/a"}
+        </Form.Select>
       </Form.Group>
 
       <div class="w-100"></div>

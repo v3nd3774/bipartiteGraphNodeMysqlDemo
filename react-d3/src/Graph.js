@@ -403,7 +403,8 @@ export default function Graph () {
             }),
         }
     var filterQueryStr = Object.entries(filterObj).map(([key, value]) => `${key}=${value}`).join('&')
-    var api_url = `${api_url}?${filterQueryStr}`
+    var targetSampleDatsetStr = `TargetDataset=${config.targetsampledataset}`
+    var api_url = `${api_url}?${filterQueryStr}&${targetSampleDatsetStr}`
     if(config.data.api.request == "GET") {
       reactData = await d3.json(api_url, function(error, data) {
         return data
