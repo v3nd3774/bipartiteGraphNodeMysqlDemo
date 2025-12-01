@@ -484,7 +484,7 @@ def serve_environ() -> Response:
         lhs_thresh: int = int(request.args.get("LHSThresh", 0))
         rhs_thresh: int = int(request.args.get("RHSThresh", 0))
         no_skip: bool = bool(request.args.get("OmitSkip", 0))
-        time_filters_string: str = request.args.get("TimeFilters", "")
+        time_filters_string: str = request.args.get("TimeFilters", [])
         untyped_time_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(time_filters_string)
         raw_t_filters: Sequence[RawTimeFilter] = []
         for x in untyped_time_filters["time_filters"]:
@@ -548,6 +548,24 @@ def csv_to_array_of_dictionaries(file_path: str) -> List[RawRowType]:
     print(f"An error occurred: {e}")
     return []
 
+@app.route("/availabletestingdata", methods=["GET", "OPTIONS"])
+@cache.cached(query_string=True)
+def serve_data_list() -> Response:
+    """ Returns the row using the environment config to extract necessary data. """
+    r: Response = Response()
+    if request.method == "OPTIONS": # preflight
+        r.headers.add("Access-Control-Allow-Origin", "*")
+        r.headers.add('Access-Control-Allow-Headers', "*")
+        r.headers.add('Access-Control-Allow-Methods', "*")
+    else: # actual req
+        filepath_spec_str: str = os.environ["CSV_SAMPLE_FILEPATHS"]
+        filepath_spec_pairs: Sequence[str] = filepath_spec_str.split(",")
+        available_datasets: Sequence[str] = [pair.split("=")[0] for pair in filepath_spec_pairs]
+        output: Mapping[str, Sequence[str]] = { "available_datasets": available_datasets }
+        r = Response(response=json.dumps(output), status=200, mimetype="application/json")
+        r.headers.add("Access-Control-Allow-Origin", "*")
+    return r
+
 @app.route("/testingsample", methods=["GET", "OPTIONS"])
 @cache.cached(query_string=True)
 def serve_environ_sample() -> Response:
@@ -558,14 +576,20 @@ def serve_environ_sample() -> Response:
         r.headers.add('Access-Control-Allow-Headers', "*")
         r.headers.add('Access-Control-Allow-Methods', "*")
     else: # actual req
-        file_path = os.environ["CSV_SAMPLE_FILEPATH"]
-        result: List[RawRowType] = csv_to_array_of_dictionaries(file_path)
+        filepath_spec_str: str = os.environ["CSV_SAMPLE_FILEPATHS"]
+        filepath_spec_pairs: Sequence[str] = filepath_spec_str.split(",")
+        filepath_spec_map: Mapping[str, List[RawRowType]] = {
+            pair.split("=")[0]: csv_to_array_of_dictionaries(pair.split("=")[1]) for pair in  filepath_spec_pairs
+        }
+        target_dataset: str = request.args.get("TargetDataset", "")
+        assert len(target_dataset) > 0, "Please provide a target dataset to be loaded."
+        result: List[RawRowType] = filepath_spec_map[target_dataset]
         # must configure thresholds to 0 in the configuration table manually when using the
         # testingsample endpoint
         lhs_thresh: int = int(request.args.get("LHSThresh", 0))
         rhs_thresh: int = int(request.args.get("RHSThresh", 0))
         no_skip: bool = bool(request.args.get("OmitSkip", 0))
-        time_filters_string: str = request.args.get("TimeFilters", "{}")
+        time_filters_string: str = request.args.get("TimeFilters", "[]")
         untyped_time_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(time_filters_string)
         raw_t_filters: Sequence[RawTimeFilter] = []
         for x in untyped_time_filters.get("time_filters", []):
