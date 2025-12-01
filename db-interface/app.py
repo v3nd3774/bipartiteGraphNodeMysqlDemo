@@ -584,7 +584,6 @@ def serve_environ_sample() -> Response:
         target_dataset: str = request.args.get("TargetDataset", "")
         assert len(target_dataset) > 0, "Please provide a target dataset to be loaded."
         result: List[RawRowType] = filepath_spec_map[target_dataset]
-        import pdb
         # must configure thresholds to 0 in the configuration table manually when using the
         # testingsample endpoint
         lhs_thresh: int = int(request.args.get("LHSThresh", 0))
