@@ -484,7 +484,7 @@ def serve_environ() -> Response:
         lhs_thresh: int = int(request.args.get("LHSThresh", 0))
         rhs_thresh: int = int(request.args.get("RHSThresh", 0))
         no_skip: bool = bool(request.args.get("OmitSkip", 0))
-        time_filters_string: str = request.args.get("TimeFilters", "")
+        time_filters_string: str = request.args.get("TimeFilters", [])
         untyped_time_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(time_filters_string)
         raw_t_filters: Sequence[RawTimeFilter] = []
         for x in untyped_time_filters["time_filters"]:
@@ -590,7 +590,7 @@ def serve_environ_sample() -> Response:
         lhs_thresh: int = int(request.args.get("LHSThresh", 0))
         rhs_thresh: int = int(request.args.get("RHSThresh", 0))
         no_skip: bool = bool(request.args.get("OmitSkip", 0))
-        time_filters_string: str = request.args.get("TimeFilters", "{}")
+        time_filters_string: str = request.args.get("TimeFilters", "[]")
         untyped_time_filters: Mapping[str, Sequence[Mapping[str, str]]] = json.loads(time_filters_string)
         raw_t_filters: Sequence[RawTimeFilter] = []
         for x in untyped_time_filters.get("time_filters", []):

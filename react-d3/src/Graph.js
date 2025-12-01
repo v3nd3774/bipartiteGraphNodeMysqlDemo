@@ -402,6 +402,12 @@ export default function Graph () {
                 )
             }),
         }
+    var datalsurl = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/availabletestingdata`
+    var datasetlsresp = await d3.json(datalsurl, function(error, data) {
+        return data
+    });
+    setConfig(updateConfig("sampledatasetnames", datasetlsresp.available_datasets, config))
+
     var filterQueryStr = Object.entries(filterObj).map(([key, value]) => `${key}=${value}`).join('&')
     var targetSampleDatsetStr = `TargetDataset=${config.targetsampledataset}`
     var api_url = `${api_url}?${filterQueryStr}&${targetSampleDatsetStr}`
