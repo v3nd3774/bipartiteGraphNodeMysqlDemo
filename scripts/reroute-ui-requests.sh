@@ -9,11 +9,13 @@ REPLACE_0=("localhost" "idir.uta.edu")
 REPLACE_1=("5001" "443")
 REPLACE_2=("environ" "bipartiteGraphApi/environ")
 REPLACE_3=("http" "https")
+REPLACE_4=("availabletestingdata" "bipartiteGraphApi/availabletestingdata")
 MAIN_ARRAY=(
   REPLACE_0[@]
   REPLACE_1[@]
   REPLACE_2[@]
   REPLACE_3[@]
+  REPLACE_4[@]
 )
 
 # https://stackoverflow.com/a/28308205
