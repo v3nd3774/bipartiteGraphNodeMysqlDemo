@@ -7,6 +7,7 @@ import copy
 import json
 import datetime
 import pandas as pd
+import numpy as np
 from functools import reduce
 from typing import Dict, List, TypeAlias, Final, Any, Literal, Sequence, Mapping
 from typing_extensions import TypedDict
@@ -36,6 +37,7 @@ from opentelemetry.sdk.metrics.export import (
     PeriodicExportingMetricReader,
     ConsoleMetricExporter
 )
+
 
 debug_mode: bool = len(sys.argv) > 1 and sys.argv[1] == "debug"
 
@@ -106,7 +108,6 @@ cache: Cache = Cache(app)
 FlaskInstrumentor().instrument_app(app) # type: ignore
 FlaskInstrumentor().instrument(enable_commenter=True, commenter_options={})
 
-
 url: str = ":".join([
     "mysql+pymysql",
     f"//{config['MYSQL_USER']}",
@@ -118,6 +119,7 @@ engine: Engine = create_engine(url)
 SQLAlchemyInstrumentor().instrument(engine=engine)
 
 RawRowType: TypeAlias = Dict[str, str | int | datetime.datetime]
+
 RowType: TypedDict = TypedDict("RowType", {
     'source': str,
     'target': str,
@@ -138,6 +140,45 @@ SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
     "min_date": str,
     "max_date": str
 })
+
+@cache.memoize()
+def csv_to_array_of_dictionaries(file_path: str) -> List[RawRowType]:
+  """Reads a CSV file into an array of dictionaries.
+
+  Args:
+    file_path: The path to the CSV file.
+
+  Returns:
+    A list of dictionaries, where each dictionary represents a row
+    in the CSV file and keys are taken from the header row.
+    Returns an empty list if the file is not found or an error occurs.
+  """
+  df = None
+  try:
+    df = pd.read_csv(file_path)
+  except FileNotFoundError:
+    print(f"Error: File not found at {file_path}")
+    return []
+  except pd.errors.EmptyDataError:
+    print(f"Error: Empty CSV file at {file_path}")
+    return []
+
+  intermed = df.to_dict('records')
+  out = []
+  for item in intermed:
+    if any([pd.isna(v) for _, v in item.items()]):
+      print(f"Skipping item due to np.nan: {item}")
+      continue
+    try:
+      data = {**item,
+        'time': datetime.datetime.strptime(item['time'], "%Y-%m-%d %H:%M:%S")
+      }
+      out.append(data)
+    except Exception as e:
+      print(f"An error occurred: {e}")
+      print(f"Item: {item}")
+      break
+  return out
 
 @cache.memoize()
 def run_query(query: str) -> List[RawRowType]:
@@ -523,30 +564,6 @@ def serve_environ() -> Response:
         r.headers.add("Access-Control-Allow-Origin", "*")
     return r
 
-def csv_to_array_of_dictionaries(file_path: str) -> List[RawRowType]:
-  """Reads a CSV file into an array of dictionaries.
-
-  Args:
-    file_path: The path to the CSV file.
-
-  Returns:
-    A list of dictionaries, where each dictionary represents a row
-    in the CSV file and keys are taken from the header row.
-    Returns an empty list if the file is not found or an error occurs.
-  """
-  try:
-    df = pd.read_csv(file_path)
-    intermed = df.to_dict('records')
-    return [{**item, 'time': datetime.datetime.strptime(item['time'], "%Y-%m-%d %H:%M:%S")} for item in intermed]
-  except FileNotFoundError:
-    print(f"Error: File not found at {file_path}")
-    return []
-  except pd.errors.EmptyDataError:
-    print(f"Error: Empty CSV file at {file_path}")
-    return []
-  except Exception as e:
-    print(f"An error occurred: {e}")
-    return []
 
 @app.route("/availabletestingdata", methods=["GET", "OPTIONS"])
 @cache.cached(query_string=True)
@@ -566,6 +583,7 @@ def serve_data_list() -> Response:
         r.headers.add("Access-Control-Allow-Origin", "*")
     return r
 
+
 @app.route("/testingsample", methods=["GET", "OPTIONS"])
 @cache.cached(query_string=True)
 def serve_environ_sample() -> Response:
@@ -576,13 +594,14 @@ def serve_environ_sample() -> Response:
         r.headers.add('Access-Control-Allow-Headers', "*")
         r.headers.add('Access-Control-Allow-Methods', "*")
     else: # actual req
+        target_dataset: str = request.args.get("TargetDataset", "")
+        assert len(target_dataset) > 0, "Please provide a target dataset to be loaded."
         filepath_spec_str: str = os.environ["CSV_SAMPLE_FILEPATHS"]
         filepath_spec_pairs: Sequence[str] = filepath_spec_str.split(",")
         filepath_spec_map: Mapping[str, List[RawRowType]] = {
             pair.split("=")[0]: csv_to_array_of_dictionaries(pair.split("=")[1]) for pair in  filepath_spec_pairs
         }
-        target_dataset: str = request.args.get("TargetDataset", "")
-        assert len(target_dataset) > 0, "Please provide a target dataset to be loaded."
+
         result: List[RawRowType] = filepath_spec_map[target_dataset]
         # must configure thresholds to 0 in the configuration table manually when using the
         # testingsample endpoint

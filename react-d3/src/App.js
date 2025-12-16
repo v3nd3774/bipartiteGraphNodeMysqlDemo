@@ -1,4 +1,5 @@
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
+import * as d3 from "d3";
 import './App.css';
 import TimeRanges from './TimeRanges';
 import DateTimeRanges from './DateTimeRanges';
@@ -19,6 +20,28 @@ function App() {
   const [config, setConfig] = useState(defaults)
 
   const header = (<Header/>);
+
+
+  useEffect(() => {
+    // Fetch your initial config data here
+    async function initialLoad() {
+      // const data = await fetchConfigFromAPI();
+        var datalsurl = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/availabletestingdata`
+        var datasetlsresp = await d3.json(datalsurl, function(error, data) {
+            return data
+        });
+        var newConfig = Object.assign({}, config, {sampledatasetnames: datasetlsresp.available_datasets});
+        var newestConfig = Object.assign({}, newConfig, {"isLoaded": true});
+        setConfig(newestConfig)
+    }
+    initialLoad();
+  }, []); // Run once on mount
+
+  // Only render the tabs once the configuration is loaded
+  if (!config.isLoaded) {
+    return <div>Initializing Application Configuration...</div>;
+  }
+
   return (
     // Fragment to return graph and graph configuration DOM elements
     // https://react.dev/reference/react/Fragment#fragment
