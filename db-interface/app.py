@@ -7,6 +7,7 @@ import copy
 import json
 import datetime
 import pandas as pd
+import numpy as np
 from functools import reduce
 from typing import Dict, List, TypeAlias, Final, Any, Literal, Sequence, Mapping
 from typing_extensions import TypedDict
@@ -534,19 +535,34 @@ def csv_to_array_of_dictionaries(file_path: str) -> List[RawRowType]:
     in the CSV file and keys are taken from the header row.
     Returns an empty list if the file is not found or an error occurs.
   """
+  df = None
   try:
     df = pd.read_csv(file_path)
-    intermed = df.to_dict('records')
-    return [{**item, 'time': datetime.datetime.strptime(item['time'], "%Y-%m-%d %H:%M:%S")} for item in intermed]
   except FileNotFoundError:
     print(f"Error: File not found at {file_path}")
     return []
   except pd.errors.EmptyDataError:
     print(f"Error: Empty CSV file at {file_path}")
     return []
-  except Exception as e:
-    print(f"An error occurred: {e}")
-    return []
+
+  intermed = df.to_dict('records')
+  out = []
+  for item in intermed:
+    if any([pd.isna(v) for _, v in item.items()]):
+      print(f"Skipping item due to np.nan: {item}")
+      continue
+    try:
+      data = {**item,
+        'time': datetime.datetime.strptime(item['time'], "%Y-%m-%d %H:%M:%S")
+      }
+      out.append(data)
+    except Exception as e:
+      print(f"An error occurred: {e}")
+      print(f"Item: {item}")
+      import pdb
+      pdb.set_trace()
+      break
+  return out
 
 @app.route("/availabletestingdata", methods=["GET", "OPTIONS"])
 @cache.cached(query_string=True)
