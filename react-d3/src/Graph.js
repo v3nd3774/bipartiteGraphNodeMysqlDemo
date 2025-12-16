@@ -59,7 +59,7 @@ export default function Graph () {
       .value(d => d.value);
     return layout(filteredData);
   }
-  function doSth (g, i, els, rawData, svg) {
+  function doSth (g, i, els, rawData, svg, colorScale) {
      d3.select("svg").selectAll("g path")
        .filter(d => {
          return d.source != i.key
@@ -74,17 +74,6 @@ export default function Graph () {
        .style("opacity", _ =>
          0
        )
-    const originLabels = []
-    d3.select("svg").selectAll("g path")
-        .filter(d => {
-            return d.source == i.key
-        })
-        .each(
-            function(d, _) {
-                originLabels.push(d);
-            }
-        )
-    const colorScale = getColorScheme(originLabels);
      d3.select("svg").selectAll("g path")
        .filter(d => {
          return d.source == i.key
@@ -100,18 +89,8 @@ export default function Graph () {
          0.5
        )
   }
-  function stopDoSthTgt (g, i, els, rawData, svg) {
+  function stopDoSthTgt (g, i, els, rawData, svg, colorScale) {
      const originLabels = []
-     d3.select("svg").selectAll("g path")
-         .filter(d => {
-             return d.source == i.key
-         })
-         .each(
-             function(d, _) {
-                 originLabels.push(d);
-             }
-         )
-     const colorScale = getColorScheme(originLabels);
      const all = d3.select("svg").selectAll("g path")
        all
        .transition()
@@ -125,18 +104,7 @@ export default function Graph () {
          0.5
        )
   }
-  function doSthTgt (g, i, els, rawData, svg) {
-     const originLabels = []
-     d3.select("svg").selectAll("g path")
-         .filter(d => {
-             return d.source == i.key
-         })
-         .each(
-             function(d, _) {
-                 originLabels.push(d);
-             }
-         )
-     const colorScale = getColorScheme(originLabels);
+  function doSthTgt (g, i, els, rawData, svg, colorScale) {
      const all = d3.select("svg").selectAll("g path")
        all
        .filter(d => {
@@ -262,9 +230,9 @@ export default function Graph () {
       .text(d => d.key)
     srclabels
       .on("mouseenter", (i, g, els) =>
-        doSth(i, g, els, rawData, svg)
+        doSth(i, g, els, rawData, svg, colorScale )
       )
-      .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
+      .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg, colorScale ))
       .on("click", (g, i, els) => {
         drawReact(layoutData, filterKey, rawData, summaryData, margin)
       })
@@ -294,8 +262,8 @@ export default function Graph () {
             return d.key
           });
      tgtlabels
-         .on("mouseenter", (i, g, els) => doSthTgt(i, g, els, rawData, svg))
-         .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg))
+         .on("mouseenter", (i, g, els) => doSthTgt(i, g, els, rawData, svg, colorScale ))
+         .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg, colorScale ))
 
 
     let path_str = lines._groups[0][0].getAttribute("d")
