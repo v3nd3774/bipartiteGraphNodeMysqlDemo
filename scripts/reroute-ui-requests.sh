@@ -8,14 +8,16 @@ UI_CODE_DIR="$PROJECT_ROOT/react-d3/src"
 REPLACE_0=("localhost" "idir.uta.edu")
 REPLACE_1=("5001" "443")
 REPLACE_2=("environ" "bipartiteGraphApi/environ")
-REPLACE_3=("http" "https")
-REPLACE_4=("availabletestingdata" "bipartiteGraphApi/availabletestingdata")
+REPLACE_3=("testingsample" "bipartiteGraphApi/testingsample")
+REPLACE_4=("http" "https")
+REPLACE_5=("availabletestingdata" "bipartiteGraphApi/availabletestingdata")
 MAIN_ARRAY=(
   REPLACE_0[@]
   REPLACE_1[@]
   REPLACE_2[@]
   REPLACE_3[@]
   REPLACE_4[@]
+  REPLACE_5[@]
 )
 
 # https://stackoverflow.com/a/28308205
