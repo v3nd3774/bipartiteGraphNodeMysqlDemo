@@ -35,6 +35,19 @@ export default function Graph () {
      detectedWidth = result.width;
   }
 
+  const tooltip = d3.select("body").append("div")
+    .attr("class", "svg-tooltip")
+    .style("position", "absolute")
+    .style("visibility", "hidden")
+    .style("background-color", "rgba(0, 0, 0, 0.8)")
+    .style("color", "#fff")
+    .style("padding", "10px")
+    .style("border-radius", "4px")
+    .style("font-family", "arial")
+    .style("font-size", "14px")
+    .style("max-width", "300px") // Good for 1-3 sentences
+    .style("pointer-events", "none")
+    .style("z-index", "1000");
 
   function createLayoutData (filteredData, summary_data, filtered = false, rawHeight=detectedHeight * 2, width=detectedWidth * 1.5, padding=config.canvas.padding) {
     function onlyUnique(value, index, array) {
@@ -59,82 +72,104 @@ export default function Graph () {
       .value(d => d.value);
     return layout(filteredData);
   }
-  function doSth (g, i, els, rawData, svg, colorScale) {
-     d3.select("svg").selectAll("g path")
-       .filter(d => {
-         return d.source != i.key
-       })
-       .transition()
-       .style("stroke", d =>
-         "white"
-       )
-       .style("stroke-width", d =>
-         0
-       )
-       .style("opacity", _ =>
-         0
-       )
-     d3.select("svg").selectAll("g path")
-       .filter(d => {
-         return d.source == i.key
-       })
-       .transition()
-       .style("stroke", d =>
-             colorScale(d.original.label)
-       )
-       .style("stroke-width", d =>
-         1.01010101010101010102
-       )
-       .style("opacity", _ =>
-         0.5
-       )
+  // function doSth (g, i, els, rawData, svg, colorScale) {
+  //    d3.select("svg").selectAll("g path")
+  //      .filter(d => {
+  //        return d.source != i.key
+  //      })
+  //      .transition()
+  //      .style("stroke", d =>
+  //        "white"
+  //      )
+  //      .style("stroke-width", d =>
+  //        0
+  //      )
+  //      .style("opacity", _ =>
+  //        0
+  //      )
+  //    d3.select("svg").selectAll("g path")
+  //      .filter(d => {
+  //        return d.source == i.key
+  //      })
+  //      .transition()
+  //      .style("stroke", d =>
+  //            colorScale(d.original.label)
+  //      )
+  //      .style("stroke-width", d =>
+  //        1.01010101010101010102
+  //      )
+  //      .style("opacity", _ =>
+  //        0.5
+  //      )
+  // }
+// Change from 6 arguments to 5 to match the .on() call
+function doSth(event, i, rawData, svg, colorScale) {
+  d3.select("svg").selectAll("g path")
+    .filter(d => {
+      // Using String casting to handle the type mismatch we found earlier
+      return String(d.original.source) !== String(i.key)
+    })
+    .transition()
+    .style("stroke", "white")
+    .style("stroke-width", 0)
+    .style("opacity", 0);
+
+  d3.select("svg").selectAll("g path")
+    .filter(d => {
+      return String(d.original.source) === String(i.key)
+    })
+    .transition()
+    .style("stroke", d => colorScale(d.original.label)) // Now colorScale will be correctly defined
+    .style("stroke-width", 1.01010101010101010102)
+    .style("opacity", 0.5);
+}
+  function stopDoSthTgt(event, d, rawData, svg, colorScale) {
+  // --- 1. Tooltip Logic ---
+  tooltip.style("visibility", "hidden");
+
+  // --- 2. Reset Paths ---
+  d3.select("svg").selectAll("g path")
+    .transition()
+    .style("stroke", p => colorScale(p.original.label))
+    .style("stroke-width", 1.01010101010101010102)
+    .style("opacity", 0.5);
   }
-  function stopDoSthTgt (g, i, els, rawData, svg, colorScale) {
-     const originLabels = []
-     const all = d3.select("svg").selectAll("g path")
-       all
-       .transition()
-       .style("stroke", d =>
-             colorScale(d.original.label)
-       )
-       .style("stroke-width", d =>
-         1.01010101010101010102
-       )
-       .style("opacity", _ =>
-         0.5
-       )
-  }
-  function doSthTgt (g, i, els, rawData, svg, colorScale) {
-     const all = d3.select("svg").selectAll("g path")
-       all
-       .filter(d => {
-         return d.target != i.key
-       })
-       .transition()
-       .style("stroke", d =>
-         "white"
-       )
-       .style("stroke-width", d =>
-         0
-       )
-       .style("opacity", _ =>
-         0
-       )
-       all
-       .filter(d => {
-         return d.target == i.key
-       })
-       .transition()
-       .style("stroke", d =>
-             colorScale(d.original.label)
-       )
-       .style("stroke-width", d =>
-         1.01010101010101010102
-       )
-       .style("opacity", _ =>
-         0.5
-       )
-  }
+  function doSthTgt(event, d, rawData, svg, colorScale) {
+  // --- 1. Tooltip Logic ---
+  const textContent = d.values[0]?.original?.content || "No additional info available.";
+  tooltip
+    .style("visibility", "visible")
+    .html(`<strong>${d.key}</strong><br/>${textContent || "No additional info available."}`);
+    // ^ Replace 'd.info' with the actual property containing your sentences
+
+  // --- 2. Existing Path Filtering Logic ---
+  const all = d3.select("svg").selectAll("g path");
+
+  //all.filter(p => p.target !== d.key)
+  //  .transition()
+  //  .style("stroke", "white")
+  //  .style("stroke-width", 0)
+  //  .style("opacity", 0);
+
+  //all.filter(p => p.target === d.key)
+  //  .transition()
+  //  .style("stroke", p => colorScale(p.original.label))
+  //  .style("stroke-width", 1.01010101010101010102)
+  //  .style("opacity", 0.5);
+  //}
+// Use String() to ensure "123" matches 123
+  all.filter(p => String(p.original.target) !== String(d.key))
+    .transition()
+    .style("stroke", "white")
+    .style("stroke-width", 0)
+    .style("opacity", 0);
+
+  all.filter(p => String(p.original.target) === String(d.key))
+    .transition()
+    .style("stroke", p => colorScale(p.original.label))
+    .style("stroke-width", 1.01010101010101010102)
+    .style("opacity", 0.5);
+    }
 
   function getColorScheme(originLabels) {
     const uniqueLabels = [...new Set(originLabels)];
@@ -219,35 +254,68 @@ export default function Graph () {
       )
       .attr('stroke', 'none');
     // source labels
-    const srclabels = container.append('g')
-      .selectAll('text')
-      .data(sources)
-      .enter().append('text')
-    srclabels
-      .attr('x', d => d.x - 15)
-      .attr('y', d => d.y + d.height/2)
-      .attr('font-family', 'arial')
-      .attr('font-size', 20)
-      .attr('alignment-baseline', 'middle')
-      .attr('text-anchor', 'middle')
-      .attr('color', 'black')
-      .text(d => d.key)
-    srclabels
-      .on("mouseenter", (i, g, els) =>
-        doSth(i, g, els, rawData, svg, colorScale )
-      )
-      .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg, colorScale ))
-      .on("click", (g, i, els) => {
-        drawReact(layoutData, filterKey, rawData, summaryData, margin)
-      })
-    d3.select("svg")
-      .on("mouseleave", () => {
-        // if there was a filter, remove it
-        if (filterKey != undefined)
-        {
-          drawReact(layoutData, filterKey, rawData, summaryData, margin)
-        }
-      })
+    //const srclabels = container.append('g')
+    //  .selectAll('text')
+    //  .data(sources)
+    //  .enter().append('text')
+    //srclabels
+    //  .attr('x', d => d.x - 15)
+    //  .attr('y', d => d.y + d.height/2)
+    //  .attr('font-family', 'arial')
+    //  .attr('font-size', 20)
+    //  .attr('alignment-baseline', 'middle')
+    //  .attr('text-anchor', 'middle')
+    //  .attr('color', 'black')
+    //  .text(d => d.key)
+    ////srclabels
+    ////  .on("mouseenter", (i, g, els) =>
+    ////    doSth(i, g, els, rawData, svg, colorScale )
+    ////  )
+    ////  .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg, colorScale ))
+    ////  .on("click", (g, i, els) => {
+    ////    drawReact(layoutData, filterKey, rawData, summaryData, margin)
+    ////  })
+    //srclabels
+    //  .on("mouseenter", (event, d) => doSth(event, d, rawData, svg, colorScale)) // Fix this too if needed
+    //  .on("mouseleave", (event, d) => stopDoSthTgt(event, d, rawData, svg, colorScale)) // Fix applied here
+    //  .on("click", (event, d) => {
+    //    drawReact(layoutData, undefined, rawData, summaryData, margin)
+    //  });
+    //d3.select("svg")
+    //  .on("mouseleave", () => {
+    //    // if there was a filter, remove it
+    //    if (filterKey != undefined)
+    //    {
+    //      drawReact(layoutData, filterKey, rawData, summaryData, margin)
+    //    }
+    //  })
+
+// 1. Create a group for source labels to match the target label structure
+const srclabelGroups = container.append('g')
+  .selectAll('g.src-label-group')
+  .data(sources)
+  .enter().append('g')
+  .attr('class', 'src-label-group')
+  // This centers the group exactly at the node's vertical midpoint
+  .attr('transform', d => `translate(${d.x - 15}, ${d.y + d.height / 2})`);
+
+// 2. Append text to the groups
+srclabelGroups.append('text')
+  .attr('font-family', 'arial')
+  .attr('font-size', 20)
+  .attr('alignment-baseline', 'middle')
+  .attr('text-anchor', 'end') // Changed to 'end' so text flows left, away from the node
+  .attr('fill', 'black')
+  .text(d => d.key);
+
+// 3. Attach the events to the group
+srclabelGroups
+  .on("mouseenter", (event, d) => doSth(event, d, rawData, svg, colorScale))
+  .on("mouseleave", (event, d) => stopDoSthTgt(event, d, rawData, svg, colorScale))
+  .on("click", (event, d) => {
+    drawReact(layoutData, undefined, rawData, summaryData, margin);
+  });
+
     // // target labels
     // const tgtlabels = container.append('g')
     //   .selectAll('text')
@@ -336,8 +404,14 @@ tgtlabels.append('rect')
 
 // 4. Re-attach events to the group so the whole area is interactive
 tgtlabels
-  .on("mouseenter", (event, d) => doSthTgt(event, d, null, rawData, svg, colorScale))
-  .on("mouseleave", (event, d) => stopDoSthTgt(event, d, null, rawData, svg, colorScale));
+  .on("mouseenter", (event, d) => doSthTgt(event, d, rawData, svg, colorScale))
+  .on("mousemove", (event) => {
+    // Keeps the tooltip following the cursor
+    tooltip
+      .style("top", (event.pageY - 10) + "px")
+      .style("left", (event.pageX - 330) + "px");
+  })
+  .on("mouseleave", (event, d) => stopDoSthTgt(event, d, rawData, svg, colorScale));
 
     let path_str = lines._groups[0][0].getAttribute("d")
     let path_parts = path_str.split(' ')
@@ -424,9 +498,14 @@ const currentK = e.transform.k;
     return `translate(${d.x}, ${centerY}) scale(${labelScale}, ${labelScale / currentK})`;
   });
 
-  srclabels.attr('transform', d => {
-    return `translate(${d.x}, ${d.y + d.height / 2}) scale(${labelScale}, ${labelScale / currentK})`;
-  });
+  //srclabels.attr('transform', d => {
+  //  return `translate(${d.x}, ${d.y + d.height / 2}) scale(${labelScale}, ${labelScale / currentK})`;
+  //});
+srclabelGroups.attr('transform', d => {
+  const centerY = d.y + d.height / 2;
+  // We include the -15 offset here so the labels stay pinned to the left of the nodes
+  return `translate(${d.x - 15}, ${centerY}) scale(${labelScale}, ${labelScale / currentK})`;
+});
 
   setConfig(updateConfig("zoomLevel", currentK, newConfig));
 
