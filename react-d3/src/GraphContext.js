@@ -37,7 +37,7 @@ export function subtractOneDay(date) {
       protocol: "http",
       host: "localhost",
       port: "5001",
-      endpoint: "environ",
+      endpoint: true,
       getorPost: true
     },
     submitSuccessModal: false,
@@ -62,6 +62,9 @@ export function subtractOneDay(date) {
         leftRenderThreshold: 10,
         rightRenderThreshold: 10,
   },
-  zoomLevel: 1
+  zoomLevel: 1,
+  colorScale: null,
+  uniqueLabels: [],
+  omitSkip: true,
 }
 export const GraphContext = createContext()
