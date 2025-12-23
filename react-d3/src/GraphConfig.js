@@ -192,7 +192,7 @@ class GraphConfig extends Component {
           value: !event.target.checked ? true : false
         }
       },
-      "request"
+      "getorPost"
     )
   }
 
@@ -413,7 +413,7 @@ class GraphConfig extends Component {
         <Form.Label>API {this.state ? (this.state.data.api.request ? "GET" : "POST") : "GET"} Request</Form.Label>
         <Form.Check
           type="switch"
-          value={this.state ? (this.state.data.api.request ? "GET" : "POST") : ""}
+          value={this.state ? (this.state.data.api.getorPost ? "GET" : "POST") : ""}
           onChange={this.updateApiGetOrPost}
         />
       </Form.Group>

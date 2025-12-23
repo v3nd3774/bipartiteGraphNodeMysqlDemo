@@ -1,3 +1,4 @@
+
 import { renderToString } from 'react-dom/server'
 import React, {useContext, useState, useEffect, useMemo} from 'react';
 import * as d3 from "d3";
@@ -554,8 +555,11 @@ srclabelGroups.attr('transform', d => {
 
     var filterQueryStr = Object.entries(filterObj).map(([key, value]) => `${key}=${value}`).join('&')
     var targetSampleDatsetStr = `TargetDataset=${config.targetsampledataset}`
-    var api_url = `${api_url}?${filterQueryStr}&${targetSampleDatsetStr}`
-    if(config.data.api.request == "GET") {
+    var api_url = `${api_url}?${filterQueryStr}`
+    if(endpoint == "testingsample") {
+        api_url = `${api_url}&${targetSampleDatsetStr}`
+    }
+    if(config.data.api.getorPost) {
       reactData = await d3.json(api_url, function(error, data) {
         return data
       });

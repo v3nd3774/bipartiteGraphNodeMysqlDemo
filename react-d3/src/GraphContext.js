@@ -37,7 +37,7 @@ export function subtractOneDay(date) {
       protocol: "http",
       host: "localhost",
       port: "5001",
-      endpoint: "environ",
+      endpoint: true,
       getorPost: true
     },
     submitSuccessModal: false,
