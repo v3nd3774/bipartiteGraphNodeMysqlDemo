@@ -37,6 +37,7 @@ class GraphConfig extends Component {
     this.updateOmitSkip = this.updateOmitSkip.bind(this)
     this.updateSubmitSuccessModal = this.updateSubmitSuccessModal.bind(this)
     this.determineWhichCheckboxToUse = this.determineWhichCheckboxToUse.bind(this)
+    this.determineWhichCheckboxToUseEndpoint = this.determineWhichCheckboxToUseEndpoint.bind(this)
     this.updateRHSThreshold = this.updateRHSThreshold.bind(this)
     this.updateLHSThreshold = this.updateLHSThreshold.bind(this)
     this.updateThreshold = this.updateThreshold.bind(this)
@@ -72,6 +73,38 @@ class GraphConfig extends Component {
     }
     return out
   }
+
+  determineWhichCheckboxToUseEndpoint() {
+    const isStatePopulated = Boolean(this.state)
+    const defaultEndpointValue = defaults.data.api.endpoint
+    var out = (
+      <Form.Check
+        type="switch"
+        value={defaultEndpointValue}
+        onChange={this.updateApiEndpoint}
+        checked
+      />
+    )
+    if (isStatePopulated) {
+      const useLiveData = Boolean(this.state.data.api.endpoint === "environ")
+      if (useLiveData) {
+        out = (<Form.Check
+          type="switch"
+          value={this.state.data.api.endpoint}
+          onChange={this.updateApiEndpoint}
+          checked
+        />)
+      } else {
+        out = (<Form.Check
+          type="switch"
+          value={this.state.data.api.endpoint}
+          onChange={this.updateApiEndpoint}
+        />)
+      }
+    }
+    return out
+  }
+
 
   updateForm(event, k, parent) {
       return updateConfig(k, event.target.value, parent);
@@ -143,7 +176,14 @@ class GraphConfig extends Component {
     this.updateApi(event, "port")
   }
   updateApiEndpoint(event) {
-    this.updateApi(event, "endpoint")
+    this.updateApi(
+      {
+        target: {
+          value: !event.target.checked ? true: false
+        }
+      },
+      "endpoint"
+    )
   }
   updateApiGetOrPost(event) {
     this.updateApi(
@@ -404,12 +444,12 @@ class GraphConfig extends Component {
           onChange={this.updateApiPort}
         />
       </Form.Group>
-      <Form.Group className="col-sm-1" controlId="formApiEndpoint">
-        <Form.Label>API Endpoint</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder="API endpoint HERE"
-          value={this.state ? this.state.data.api.endpoint : ""}
+
+      <Form.Group className="col-sm-2" controlId="formApiEndpoint">
+        <Form.Label>API {this.state ? (this.state.data.api.endpoint ? "environ" : "testingsample") : "N/A"} Request</Form.Label>
+        <Form.Check
+          type="switch"
+          value={this.state ? (this.state.data.api.endpoint ? "environ" : "testingsample") : "N/A"}
           onChange={this.updateApiEndpoint}
         />
       </Form.Group>

@@ -175,6 +175,10 @@ export default function Graph () {
 
     const originLabels = flows.map(flow => flow.original.label)
     const colorScale = getColorScheme(originLabels);
+    const uniqueLabels = [...new Set(originLabels)];
+
+    var newConfig = Object.assign({}, config, {colorScale: colorScale}, {uniqueLabels: uniqueLabels})
+    setConfig(newConfig)
 
     // flow lines
     let lines = container.append('g')
@@ -328,7 +332,7 @@ export default function Graph () {
 
       cont
           .attr("transform", `scale(1, ${e.transform.k}) translate(0, ${e.transform.y})`);
-      setConfig(updateConfig("zoomLevel", e.transform.k, config))
+      setConfig(updateConfig("zoomLevel", e.transform.k, newConfig))
     }
     let zoom = d3.zoom()
       .scaleExtent([0.1, 5])
@@ -344,7 +348,8 @@ export default function Graph () {
     let stringToInject = renderToString(<Loading/>)
     d3.select("div.container").html(stringToInject)
     var reactData;
-    var api_url = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/${config.data.api.endpoint}`
+    const endpoint = config.data.api.endpoint ? "environ" : "testingsample"
+    var api_url = `${config.data.api.protocol}://${config.data.api.host}:${config.data.api.port}/${endpoint}`
     var filterObj = {
             "LHSThresh": config.filterConf.leftRenderThreshold,
             "RHSThresh": config.filterConf.rightRenderThreshold,
