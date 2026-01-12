@@ -1,6 +1,6 @@
 
 import { renderToString } from 'react-dom/server'
-import React, {useContext, useState, useEffect, useMemo} from 'react';
+import React, {useContext, useState, useEffect, useRef, useMemo} from 'react';
 import * as d3 from "d3";
 import ShowModal from './ShowModal'
 import axios from 'axios';
@@ -18,6 +18,19 @@ import './Graph.css';
 // https://observablehq.com/@d3/zoomable-area-chart?collection=@d3/d3-zoom
 // above example has static y axis; will need this to be a static x axis with y axis being the zoomable part
 
+function updatePathStyles(selectedNodes, colorScale) {
+  const allPaths = d3.select("svg").selectAll("g path");
+  allPaths
+    .transition()
+    .style("stroke", d => colorScale(d.original.label))
+    .style("stroke-width", d => selectedNodes.includes(String(d.original.source)) || selectedNodes.includes(String(d.original.target))
+      ? d.thickness * 2  // Thicker lines for edges connected to selected nodes
+      : d.thickness)
+    .style("opacity", d => selectedNodes.includes(String(d.original.source)) || selectedNodes.includes(String(d.original.target))
+      ? 1.0  // Full opacity for edges connected to selected nodes
+      : 0.5); // Normal opacity for other edges
+}
+
 function getWindowDimensions() {
   const { innerWidth: width, innerHeight: height } = window;
   return { height, width };
@@ -26,8 +39,125 @@ function getWindowDimensions() {
 export default function Graph () {
 
   var [config, setConfig] = useContext(GraphContext)
+  const [selectedNodes, setSelectedNodes] = useState([]);
+  const selectedNodesRef = useRef(selectedNodes);
+
+  useEffect(() => {
+    selectedNodesRef.current = selectedNodes;
+  }, [selectedNodes]);
+
   var { detectedHeight, detectedWidth } = getWindowDimensions();
   var result;
+
+
+  function doSth(event, i, rawData, svg, colorScale) {
+    const hoveredNodeId = String(i.key);
+    // Use the ref to get the latest selectedNodes
+    const currentSelectedNodes = selectedNodesRef.current;
+
+    d3.select("svg").selectAll("g path")
+      .filter(d => String(d.original.source) !== hoveredNodeId)
+      .transition()
+      .style("stroke", d => {
+        // If this edge is connected to a selected node, keep its color
+        if (currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target))) {
+          return colorScale(d.original.label);
+        }
+        // Otherwise, make it white (translucent)
+        return "white";
+      })
+      .style("stroke-width", d => {
+        // If this edge is connected to a selected node, keep it visible
+        if (currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target))) {
+          return d.thickness * 2;
+        }
+        return 0;
+      })
+      .style("opacity", d => {
+        if (currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target))) {
+          return 0.5;
+        }
+        return 0;
+      });
+
+    d3.select("svg").selectAll("g path")
+      .filter(d => String(d.original.source) === hoveredNodeId)
+      .transition()
+      .style("stroke", d => colorScale(d.original.label))
+      .style("stroke-width", d => d.thickness * 2)
+      .style("opacity", 0.5);
+  }
+  function stopDoSthTgt(event, d, rawData, svg, colorScale) {
+    const currentSelectedNodes = selectedNodesRef.current;
+    // --- 1. Tooltip Logic ---
+    tooltip.style("visibility", "hidden");
+
+    // --- 2. Reset Paths ---
+    d3.select("svg").selectAll("g path")
+      .transition()
+      .style("stroke", p => colorScale(p.original.label))
+      .style("stroke-width", p => {
+        // If connected to selected node, make it thicker
+        if (currentSelectedNodes.includes(String(p.original.source)) || currentSelectedNodes.includes(String(p.original.target))) {
+          return p.thickness * 2;
+        }
+        return p.thickness;
+      })
+      .style("opacity", p => {
+        // If connected to selected node, make it more opaque
+        if (currentSelectedNodes.includes(String(p.original.source)) || currentSelectedNodes.includes(String(p.original.target))) {
+          return 1.0; // Full opacity for selected nodes
+        }
+        return 0.5; // Normal opacity for others
+      });
+  }
+  function doSthTgt(event, d, rawData, svg, colorScale) {
+    const currentSelectedNodes = selectedNodesRef.current;
+    // --- 1. Tooltip Logic ---
+    const textContent = d.values[0]?.original?.content || "No additional info available.";
+    tooltip
+      .style("visibility", "visible")
+      .html(`<strong>${d.key}</strong><br/>${textContent || "No additional info available."}`);
+
+    // --- 2. Path Filtering Logic ---
+    const all = d3.select("svg").selectAll("g path");
+    const hoveredNodeId = String(d.key);
+
+    // Filter out paths NOT connected to the hovered node
+    all.filter(p => String(p.original.target) !== hoveredNodeId)
+      .transition()
+      .style("stroke", p => {
+        // If this edge is connected to a selected node, keep its color
+        if (currentSelectedNodes.includes(String(p.original.source)) || currentSelectedNodes.includes(String(p.original.target))) {
+          return colorScale(p.original.label);
+        }
+        // Otherwise, make it white (translucent)
+        return "white";
+      })
+      .style("stroke-width", p => {
+        // If this edge is connected to a selected node, keep it visible
+        if (currentSelectedNodes.includes(String(p.original.source)) || currentSelectedNodes.includes(String(p.original.target))) {
+          return p.thickness * 2; // Thicker for selected nodes
+        }
+        // Otherwise, hide it
+        return 0;
+      })
+      .style("opacity", p => {
+        // If this edge is connected to a selected node, keep it visible
+        if (currentSelectedNodes.includes(String(p.original.source)) || currentSelectedNodes.includes(String(p.original.target))) {
+          return 0.5; // Or 1.0 if you want them fully opaque
+        }
+        // Otherwise, hide it
+        return 0;
+      });
+
+    // Always highlight edges connected to the hovered node
+    all.filter(p => String(p.original.target) === hoveredNodeId)
+      .transition()
+      .style("stroke", p => colorScale(p.original.label))
+      .style("stroke-width", p => p.thickness * 2) // Make hovered edges prominent
+      .style("opacity", 0.5);
+  }
 
 
   while (typeof detectedHeight === "undefined") {
@@ -73,104 +203,6 @@ export default function Graph () {
       .value(d => d.value);
     return layout(filteredData);
   }
-  // function doSth (g, i, els, rawData, svg, colorScale) {
-  //    d3.select("svg").selectAll("g path")
-  //      .filter(d => {
-  //        return d.source != i.key
-  //      })
-  //      .transition()
-  //      .style("stroke", d =>
-  //        "white"
-  //      )
-  //      .style("stroke-width", d =>
-  //        0
-  //      )
-  //      .style("opacity", _ =>
-  //        0
-  //      )
-  //    d3.select("svg").selectAll("g path")
-  //      .filter(d => {
-  //        return d.source == i.key
-  //      })
-  //      .transition()
-  //      .style("stroke", d =>
-  //            colorScale(d.original.label)
-  //      )
-  //      .style("stroke-width", d =>
-  //        1.01010101010101010102
-  //      )
-  //      .style("opacity", _ =>
-  //        0.5
-  //      )
-  // }
-// Change from 6 arguments to 5 to match the .on() call
-function doSth(event, i, rawData, svg, colorScale) {
-  d3.select("svg").selectAll("g path")
-    .filter(d => {
-      // Using String casting to handle the type mismatch we found earlier
-      return String(d.original.source) !== String(i.key)
-    })
-    .transition()
-    .style("stroke", "white")
-    .style("stroke-width", 0)
-    .style("opacity", 0);
-
-  d3.select("svg").selectAll("g path")
-    .filter(d => {
-      return String(d.original.source) === String(i.key)
-    })
-    .transition()
-    .style("stroke", d => colorScale(d.original.label)) // Now colorScale will be correctly defined
-    .style("stroke-width", 1.01010101010101010102)
-    .style("opacity", 0.5);
-}
-  function stopDoSthTgt(event, d, rawData, svg, colorScale) {
-  // --- 1. Tooltip Logic ---
-  tooltip.style("visibility", "hidden");
-
-  // --- 2. Reset Paths ---
-  d3.select("svg").selectAll("g path")
-    .transition()
-    .style("stroke", p => colorScale(p.original.label))
-    .style("stroke-width", 1.01010101010101010102)
-    .style("opacity", 0.5);
-  }
-  function doSthTgt(event, d, rawData, svg, colorScale) {
-  // --- 1. Tooltip Logic ---
-  const textContent = d.values[0]?.original?.content || "No additional info available.";
-  tooltip
-    .style("visibility", "visible")
-    .html(`<strong>${d.key}</strong><br/>${textContent || "No additional info available."}`);
-    // ^ Replace 'd.info' with the actual property containing your sentences
-
-  // --- 2. Existing Path Filtering Logic ---
-  const all = d3.select("svg").selectAll("g path");
-
-  //all.filter(p => p.target !== d.key)
-  //  .transition()
-  //  .style("stroke", "white")
-  //  .style("stroke-width", 0)
-  //  .style("opacity", 0);
-
-  //all.filter(p => p.target === d.key)
-  //  .transition()
-  //  .style("stroke", p => colorScale(p.original.label))
-  //  .style("stroke-width", 1.01010101010101010102)
-  //  .style("opacity", 0.5);
-  //}
-// Use String() to ensure "123" matches 123
-  all.filter(p => String(p.original.target) !== String(d.key))
-    .transition()
-    .style("stroke", "white")
-    .style("stroke-width", 0)
-    .style("opacity", 0);
-
-  all.filter(p => String(p.original.target) === String(d.key))
-    .transition()
-    .style("stroke", p => colorScale(p.original.label))
-    .style("stroke-width", 1.01010101010101010102)
-    .style("opacity", 0.5);
-    }
 
   function getColorScheme(originLabels) {
     const uniqueLabels = [...new Set(originLabels)];
@@ -216,18 +248,25 @@ function doSth(event, i, rawData, svg, colorScale) {
     var newConfig = Object.assign({}, config, {colorScale: colorScale}, {uniqueLabels: uniqueLabels})
     setConfig(newConfig)
 
+    const currentSelectedNodes = selectedNodesRef.current;
     // flow lines
     let lines = container.append('g')
       .selectAll('path')
       .data(flows)
       .enter().append('path')
       .attr('d', d => d.path)
-      .attr('opacity', 0.5)
       .attr('fill', 'none')
       .attr('stroke', d =>
              colorScale(d.original.label)
       )
-          .attr('stroke-width', d => d.thickness);
+      .attr('stroke-width', d => d.thickness)
+      // Apply initial styles based on selection
+      .style("opacity", d => currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target))
+        ? 1.0
+        : 0.5)
+      .style("stroke-width", d => currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target))
+        ? d.thickness * 2
+        : d.thickness);
     // source node rectangles
     let source_nodes = container.append('g')
       .selectAll('rect')
@@ -254,42 +293,6 @@ function doSth(event, i, rawData, svg, colorScale) {
              colorScale(d.original.label)
       )
       .attr('stroke', 'none');
-    // source labels
-    //const srclabels = container.append('g')
-    //  .selectAll('text')
-    //  .data(sources)
-    //  .enter().append('text')
-    //srclabels
-    //  .attr('x', d => d.x - 15)
-    //  .attr('y', d => d.y + d.height/2)
-    //  .attr('font-family', 'arial')
-    //  .attr('font-size', 20)
-    //  .attr('alignment-baseline', 'middle')
-    //  .attr('text-anchor', 'middle')
-    //  .attr('color', 'black')
-    //  .text(d => d.key)
-    ////srclabels
-    ////  .on("mouseenter", (i, g, els) =>
-    ////    doSth(i, g, els, rawData, svg, colorScale )
-    ////  )
-    ////  .on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg, colorScale ))
-    ////  .on("click", (g, i, els) => {
-    ////    drawReact(layoutData, filterKey, rawData, summaryData, margin)
-    ////  })
-    //srclabels
-    //  .on("mouseenter", (event, d) => doSth(event, d, rawData, svg, colorScale)) // Fix this too if needed
-    //  .on("mouseleave", (event, d) => stopDoSthTgt(event, d, rawData, svg, colorScale)) // Fix applied here
-    //  .on("click", (event, d) => {
-    //    drawReact(layoutData, undefined, rawData, summaryData, margin)
-    //  });
-    //d3.select("svg")
-    //  .on("mouseleave", () => {
-    //    // if there was a filter, remove it
-    //    if (filterKey != undefined)
-    //    {
-    //      drawReact(layoutData, filterKey, rawData, summaryData, margin)
-    //    }
-    //  })
 
 // 1. Create a group for source labels to match the target label structure
 const srclabelGroups = container.append('g')
@@ -313,48 +316,16 @@ srclabelGroups.append('text')
 srclabelGroups
   .on("mouseenter", (event, d) => doSth(event, d, rawData, svg, colorScale))
   .on("mouseleave", (event, d) => stopDoSthTgt(event, d, rawData, svg, colorScale))
-  .on("click", (event, d) => {
-    drawReact(layoutData, undefined, rawData, summaryData, margin);
+  .on("click.selection", (event, d) => {
+    event.stopPropagation();
+    const nodeId = String(d.key);
+    const currentSelectedNodes = selectedNodesRef.current;  // <- Get from ref
+    const newSelectedNodes = currentSelectedNodes.includes(nodeId)  // <- Use ref
+      ? currentSelectedNodes.filter(id => id !== nodeId)  // <- Use ref
+      : [...currentSelectedNodes, nodeId];  // <- Use ref
+    setSelectedNodes(newSelectedNodes);
+    updatePathStyles(newSelectedNodes, colorScale);
   });
-
-    // // target labels
-    // const tgtlabels = container.append('g')
-    //   .selectAll('text')
-    //   .data(targets)
-    //   .enter().append('text')
-
-    // var itemIdxToConcensus = {}
-    // tgtlabels.each(d => {
-    //     const itemIdx = d.key
-    //     const edges = d.values
-    //     const originalEdges = edges.map(e => e.original)
-    //     const originalLabels = originalEdges.map(e => e.label)
-    //     const freqs = originalLabels.reduce((countMap, edge) => {
-    //       countMap[edge] = (countMap[edge] || 0) + 1;
-    //       return countMap;
-    //     }, {})
-    //     const entries = Object.entries(freqs)
-    //     const highestEntry = [...entries].reduce((maxEntry, currentEntry) => {
-    //         return currentEntry[1] > maxEntry[1] ? currentEntry : maxEntry;
-    //     });
-    //     itemIdxToConcensus[itemIdx] = highestEntry[0]
-    // })
-
-    // tgtlabels
-    //   .attr('x', d => d.x)
-    //   .attr('y', d => d.y + d.height/2)
-    //       .attr('font-family', 'arial')
-    //       .attr('font-size', 20)
-    //       .attr('alignment-baseline', 'middle')
-    //       .attr('text-anchor', 'middle')
-    //       .attr('color', 'black')
-    //       .text(d => {
-    //         return d.key
-    //       })
-    //       .attr('fill', d => colorScale(itemIdxToConcensus[d.key]))
-    //  tgtlabels
-    //      .on("mouseenter", (i, g, els) => doSthTgt(i, g, els, rawData, svg, colorScale ))
-         //.on("mouseleave", (i, g, els) => stopDoSthTgt(i, g, els, rawData, svg, colorScale ))
 
 // 1. Change selection to 'g' instead of 'text'
 const tgtlabels = container.append('g')
@@ -412,7 +383,17 @@ tgtlabels
       .style("top", (event.pageY - 10) + "px")
       .style("left", (event.pageX - 330) + "px");
   })
-  .on("mouseleave", (event, d) => stopDoSthTgt(event, d, rawData, svg, colorScale));
+  .on("mouseleave", (event, d) => stopDoSthTgt(event, d, rawData, svg, colorScale))
+  .on("click", (event, d) => {
+    event.stopPropagation();
+    const nodeId = String(d.key);
+    const currentSelectedNodes = selectedNodesRef.current;  // <- Get from ref
+    const newSelectedNodes = currentSelectedNodes.includes(nodeId)  // <- Use ref
+      ? currentSelectedNodes.filter(id => id !== nodeId)  // <- Use ref
+      : [...currentSelectedNodes, nodeId];  // <- Use ref
+    setSelectedNodes(newSelectedNodes);
+    updatePathStyles(newSelectedNodes, colorScale);
+  });
 
     let path_str = lines._groups[0][0].getAttribute("d")
     let path_parts = path_str.split(' ')
@@ -635,19 +616,47 @@ srclabelGroups.attr('transform', d => {
     )
   ])
 
+useEffect(() => {
+  // Update path styles whenever selectedNodes changes
+  if (config.colorScale && selectedNodes.length > 0) {
+    updatePathStyles(selectedNodes, config.colorScale);
+  }
+}, [selectedNodes, config.colorScale])
+
   return (
-  <div className="container">
-  <ShowModal
-    title={"No Data"}
-    body={"No data to display."}
-    setShow={
-        ((cfg, sConf, show) => {
-            var newData = Object.assign({}, cfg.data, { noDataModal: show })
-            var newConfig = Object.assign({}, cfg, {data: newData})
-            sConf(newConfig)
-        })}
-    configPath={["data", "noDataModal"]} />
-    <svg />
+  <div>
+    <button
+      onClick={() => {
+        setSelectedNodes([]);
+        // Update visual styles immediately
+        if (config.colorScale) {
+          updatePathStyles([], config.colorScale);
+        }
+      }}
+      style={{
+        marginBottom: '10px',
+        padding: '8px 16px',
+        backgroundColor: '#f0f0f0',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        cursor: 'pointer'
+      }}
+    >
+      Reset Selections
+    </button>
+    <div className="container">
+    <ShowModal
+      title={"No Data"}
+      body={"No data to display."}
+      setShow={
+          ((cfg, sConf, show) => {
+              var newData = Object.assign({}, cfg.data, { noDataModal: show })
+              var newConfig = Object.assign({}, cfg, {data: newData})
+              sConf(newConfig)
+          })}
+      configPath={["data", "noDataModal"]} />
+      <svg />
+    </div>
   </div>
   )
 }
