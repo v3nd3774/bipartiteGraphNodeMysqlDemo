@@ -1,5 +1,6 @@
 
 import { renderToString } from 'react-dom/server'
+import Button from 'react-bootstrap/Button'; // Add this import
 import React, {useContext, useState, useEffect, useRef, useMemo} from 'react';
 import * as d3 from "d3";
 import ShowModal from './ShowModal'
@@ -18,19 +19,6 @@ import './Graph.css';
 // https://observablehq.com/@d3/zoomable-area-chart?collection=@d3/d3-zoom
 // above example has static y axis; will need this to be a static x axis with y axis being the zoomable part
 
-function updatePathStyles(selectedNodes, colorScale) {
-  const allPaths = d3.select("svg").selectAll("g path");
-  allPaths
-    .transition()
-    .style("stroke", d => colorScale(d.original.label))
-    .style("stroke-width", d => selectedNodes.includes(String(d.original.source)) || selectedNodes.includes(String(d.original.target))
-      ? d.thickness * 2  // Thicker lines for edges connected to selected nodes
-      : d.thickness)
-    .style("opacity", d => selectedNodes.includes(String(d.original.source)) || selectedNodes.includes(String(d.original.target))
-      ? 1.0  // Full opacity for edges connected to selected nodes
-      : 0.5); // Normal opacity for other edges
-}
-
 function getWindowDimensions() {
   const { innerWidth: width, innerHeight: height } = window;
   return { height, width };
@@ -41,16 +29,45 @@ export default function Graph () {
   var [config, setConfig] = useContext(GraphContext)
   const [selectedNodes, setSelectedNodes] = useState([]);
   const selectedNodesRef = useRef(selectedNodes);
+  const [hideUnselected, setHideUnselected] = useState(false); // Add this state
+  const hideUnselectedRef = useRef(hideUnselected);
 
   useEffect(() => {
     selectedNodesRef.current = selectedNodes;
   }, [selectedNodes]);
+  useEffect(() => {
+    hideUnselectedRef.current = hideUnselected;
+  }, [hideUnselected]);
+
 
   var { detectedHeight, detectedWidth } = getWindowDimensions();
   var result;
 
+  function updatePathStyles(selectedNodes, colorScale) {
+    const allPaths = d3.select("svg").selectAll("g path");
+    const shouldHideUnselected = hideUnselectedRef.current;
+    allPaths
+      .transition()
+      .style("stroke", d => colorScale(d.original.label))
+      .style("stroke-width", d => {
+        const isSelected = selectedNodes.includes(String(d.original.source)) || selectedNodes.includes(String(d.original.target));
+        if (shouldHideUnselected && !isSelected) {
+          return 0; // Hide unselected edges in hide mode
+        }
+        return isSelected ? d.thickness * 2 : d.thickness;
+      })
+      .style("opacity", d => {
+        const isSelected = selectedNodes.includes(String(d.original.source)) || selectedNodes.includes(String(d.original.target));
+        if (shouldHideUnselected && !isSelected) {
+          return 0; // Hide unselected edges in hide mode
+        }
+        return isSelected ? 1.0 : 0.5;
+      });
+  }
 
   function doSth(event, i, rawData, svg, colorScale) {
+    // If hide mode is enabled, don't apply hover effects
+    if (hideUnselectedRef.current) return;
     const hoveredNodeId = String(i.key);
     // Use the ref to get the latest selectedNodes
     const currentSelectedNodes = selectedNodesRef.current;
@@ -88,6 +105,8 @@ export default function Graph () {
       .style("opacity", 0.5);
   }
   function stopDoSthTgt(event, d, rawData, svg, colorScale) {
+    // If hide mode is enabled, don't reset to normal opacity
+    if (hideUnselectedRef.current) return;
     const currentSelectedNodes = selectedNodesRef.current;
     // --- 1. Tooltip Logic ---
     tooltip.style("visibility", "hidden");
@@ -113,11 +132,16 @@ export default function Graph () {
   }
   function doSthTgt(event, d, rawData, svg, colorScale) {
     const currentSelectedNodes = selectedNodesRef.current;
+    // If hide mode is enabled, still show tooltip but don't apply hover effects
+    const shouldHideUnselected = hideUnselectedRef.current;
     // --- 1. Tooltip Logic ---
     const textContent = d.values[0]?.original?.content || "No additional info available.";
     tooltip
       .style("visibility", "visible")
       .html(`<strong>${d.key}</strong><br/>${textContent || "No additional info available."}`);
+
+    // If hide mode is enabled, don't apply hover effects
+    if (shouldHideUnselected) return;
 
     // --- 2. Path Filtering Logic ---
     const all = d3.select("svg").selectAll("g path");
@@ -260,13 +284,22 @@ export default function Graph () {
              colorScale(d.original.label)
       )
       .attr('stroke-width', d => d.thickness)
+      // Apply initial styles based on selection and hide mode
+      .style("opacity", d => {
+        const isSelected = currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target));
+        if (hideUnselectedRef.current && !isSelected) {
+          return 0; // Hide unselected edges
+        }
+        return isSelected ? 1.0 : 0.5;
+      })
+      .style("stroke-width", d => {
+        const isSelected = currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target));
+        if (hideUnselectedRef.current && !isSelected) {
+          return 0; // Hide unselected edges
+        }
+        return isSelected ? d.thickness * 2 : d.thickness;
+      });
       // Apply initial styles based on selection
-      .style("opacity", d => currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target))
-        ? 1.0
-        : 0.5)
-      .style("stroke-width", d => currentSelectedNodes.includes(String(d.original.source)) || currentSelectedNodes.includes(String(d.original.target))
-        ? d.thickness * 2
-        : d.thickness);
     // source node rectangles
     let source_nodes = container.append('g')
       .selectAll('rect')
@@ -616,45 +649,60 @@ srclabelGroups.attr('transform', d => {
     )
   ])
 
-useEffect(() => {
-  // Update path styles whenever selectedNodes changes
-  if (config.colorScale && selectedNodes.length > 0) {
-    updatePathStyles(selectedNodes, config.colorScale);
-  }
-}, [selectedNodes, config.colorScale])
+  useEffect(() => {
+    // Update path styles whenever selectedNodes changes
+    if (config.colorScale && selectedNodes.length > 0) {
+      updatePathStyles(selectedNodes, config.colorScale);
+    }
+  }, [selectedNodes, config.colorScale])
+
+  useEffect(() => {
+    // Update path styles whenever hideUnselected changes
+    if (config.colorScale) {
+      updatePathStyles(selectedNodes, config.colorScale);
+    }
+  }, [hideUnselected, config.colorScale, selectedNodes]);
 
   return (
   <div>
-    <button
-      onClick={() => {
-        setSelectedNodes([]);
-        // Update visual styles immediately
-        if (config.colorScale) {
-          updatePathStyles([], config.colorScale);
-        }
-      }}
-      style={{
-        marginBottom: '10px',
-        padding: '8px 16px',
-        backgroundColor: '#f0f0f0',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        cursor: 'pointer'
-      }}
-    >
-      Reset Selections
-    </button>
+    <div style={{ marginBottom: '10px', display: 'flex', gap: '10px' }}>
+      <Button
+        variant={hideUnselected ? "primary" : "outline-primary"}
+        onClick={() => {
+          const newHideState = !hideUnselected;
+          setHideUnselected(newHideState);
+          // When toggling hide mode, update the visual styles
+          if (config.colorScale) {
+            updatePathStyles(selectedNodes, config.colorScale);
+          }
+        }}
+      >
+        {hideUnselected ? "û Hide Unselected" : "Hide Unselected"}
+      </Button>
+      <Button
+        variant="outline-secondary"
+        onClick={() => {
+          setSelectedNodes([]);
+          // Update visual styles immediately
+          if (config.colorScale) {
+            updatePathStyles([], config.colorScale);
+          }
+        }}
+      >
+        Reset Selections
+      </Button>
+    </div>
     <div className="container">
-    <ShowModal
-      title={"No Data"}
-      body={"No data to display."}
-      setShow={
-          ((cfg, sConf, show) => {
-              var newData = Object.assign({}, cfg.data, { noDataModal: show })
-              var newConfig = Object.assign({}, cfg, {data: newData})
-              sConf(newConfig)
-          })}
-      configPath={["data", "noDataModal"]} />
+      <ShowModal
+        title={"No Data"}
+        body={"No data to display."}
+        setShow={
+            ((cfg, sConf, show) => {
+                var newData = Object.assign({}, cfg.data, { noDataModal: show })
+                var newConfig = Object.assign({}, cfg, {data: newData})
+                sConf(newConfig)
+            })}
+        configPath={["data", "noDataModal"]} />
       <svg />
     </div>
   </div>
