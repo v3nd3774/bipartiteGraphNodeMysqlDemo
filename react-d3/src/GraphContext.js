@@ -46,8 +46,8 @@ export function subtractOneDay(date) {
     noDataModalSummary: false
   },
   response: {},
-  sampledatasetnames: ["claimbuster", "claim_matching"],
-  targetsampledataset: "claimbuster",
+  sampledatasetnames: ["claimbuster_period_1", "claimbuster_period_2", "claimbuster_period_3"],
+  targetsampledataset: "claimbuster_period_1",
   sortingConf: {
         lhs: "alphabetical labeler",
         rhs: "numerical id"
