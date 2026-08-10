@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # MySQL Database Service (5.7 for compatibility)
+  mysql:
+    image: mysql:5.7
+    container_name: factchecker_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - /home/v3nd3774/factchecker_backup_20260713.sql.gz:/tmp/backup.sql.gz
+    networks:
+      - factchecker_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # Database Interface (Flask API)
+  db-interface:
+    image: python:3.11-slim
+    container_name: factchecker_api
+    ports:
+      - "5001:5001"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_DB: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_JOIN_QUERY: ${MYSQL_JOIN_QUERY}
+      MYSQL_LABEL_COLUMN: ${MYSQL_LABEL_COLUMN}
+      MYSQL_LABELER_COLUMN: ${MYSQL_LABEL_COLUMN}
+      MYSQL_LABELER_QUALITY_COLUMN: ${MYSQL_LABELER_QUALITY_COLUMN}
+      MYSQL_LABELEE_COLUMN: ${MYSQL_LABELEE_COLUMN}
+      MYSQL_LABELEE_ID_COLUMN: ${MYSQL_LABELEE_ID_COLUMN}
+      MYSQL_LABELEE_CONTENT_COLUMN: ${MYSQL_LABELEE_CONTENT_COLUMN}
+      MYSQL_TIME_COLUMN: ${MYSQL_TIME_COLUMN}
+      DEBUG: ${DEBUG}
+      MYSQL_OUTPUT_TIME_FORMAT: ${MYSQL_OUTPUT_TIME_FORMAT}
+      CSV_SAMPLE_FILEPATHS: ${CSV_DOCKER_SAMPLE_FILEPATHS}
+      FLASK_ENV: ${FLASK_ENV:-production}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./db-interface:/app
+    working_dir: /app
+    command: >
+      sh -c "
+        apt-get update && apt-get install -y default-libmysqlclient-dev build-essential gcc &&
+        pip install --no-cache-dir -r requirements.txt &&
+        python app.py ${DEBUG}
+      "
+    networks:
+      - factchecker_network
+
+  # React Frontend
+  react-d3:
+    image: node:16-alpine
+    container_name: factchecker_ui
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://db-interface:5000
+    depends_on:
+      - db-interface
+    volumes:
+      - ./react-d3:/app
+      - /app/node_modules
+    working_dir: /app
+    command: >
+      sh -c "
+        apk add --no-cache shadow &&
+        chown -R node:node /app &&
+        npm install &&
+        npm run build &&
+        npm install -g serve &&
+        serve -s build -l 3000
+      "
+    networks:
+      - factchecker_network
+
+  # MySQL initialization helper (restores backup)
+  mysql-init:
+    image: mysql:5.7
+    container_name: factchecker_mysql_init
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - /home/v3nd3774/factchecker_backup_20260713.sql.gz:/tmp/backup.sql.gz
+    networks:
+      - factchecker_network
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+    command: >
+      sh -c "
+        echo 'Waiting for MySQL to be ready...' &&
+        sleep 15 &&
+        echo 'Restoring backup...' &&
+        gunzip < /tmp/backup.sql.gz | mysql -h mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DB} &&
+
+        echo 'Backup restored successfully!' &&
+        exit 0
+      "
+    restart: "no"
+
+networks:
+  factchecker_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
