@@ -14,7 +14,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - /home/v3nd3774/factchecker_backup_20260713.sql.gz:/tmp/backup.sql.gz
+      - ${BACKUP_FILE}:/tmp/backup.sql.gz
     networks:
       - factchecker_network
     healthcheck:
@@ -99,7 +99,7 @@ services:
       mysql:
         condition: service_healthy
     volumes:
-      - /home/v3nd3774/factchecker_backup_20260713.sql.gz:/tmp/backup.sql.gz
+      - ${BACKUP_FILE}:/tmp/backup.sql.gz
     networks:
       - factchecker_network
     environment:
