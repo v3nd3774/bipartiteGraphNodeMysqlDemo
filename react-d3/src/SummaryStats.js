@@ -186,7 +186,7 @@ export default function SummaryStats () {
                 .append("option")
             lhsOptions
                 .text(d => d.label)
-                .attr(d => d.label)
+                .attr("id", d => d.label)
             d3.select("div.lhs-node-unique-cnts-dropdown")
                 .selectAll("p")
                 .text(`${(100 * lhsSorted[0].cnt / data.edge_cnt).toFixed(2)}%`)
