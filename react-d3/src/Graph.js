@@ -607,7 +607,8 @@ srclabelGroups.attr('transform', d => {
             var newConfig = Object.assign({}, config, {data: newData})
             setConfig(updateConfig("response", reactData, newConfig))
     } else {
-        setConfig(updateConfig("response", reactData, config))
+        var clearedData = Object.assign({}, config.data, { noDataModal: false, noDataModalTable: false, noDataModalSummary: false})
+        setConfig(updateConfig("response", reactData, Object.assign({}, config, {data: clearedData})))
         //console.log("Storing data")
         //console.log(config)
 
@@ -677,7 +678,7 @@ srclabelGroups.attr('transform', d => {
           }
         }}
       >
-        {hideUnselected ? "û Hide Unselected" : "Hide Unselected"}
+        {hideUnselected ? "ï¿½ Hide Unselected" : "Hide Unselected"}
       </Button>
       <Button
         variant="outline-secondary"
