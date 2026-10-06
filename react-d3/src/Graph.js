@@ -1,7 +1,7 @@
 
 import { renderToString } from 'react-dom/server'
 import Button from 'react-bootstrap/Button'; // Add this import
-import React, {useContext, useState, useEffect, useRef, useMemo} from 'react';
+import React, {useContext, useState, useEffect, useRef} from 'react';
 import * as d3 from "d3";
 import ShowModal from './ShowModal'
 import axios from 'axios';
@@ -269,8 +269,8 @@ export default function Graph () {
     const colorScale = getColorScheme(originLabels);
     const uniqueLabels = [...new Set(originLabels)];
 
-    var newConfig = Object.assign({}, config, {colorScale: colorScale}, {uniqueLabels: uniqueLabels})
-    setConfig(newConfig)
+    // Functional update: `config` here is the stale pre-fetch closure and would overwrite `response`
+    setConfig(prev => Object.assign({}, prev, {colorScale: colorScale}, {uniqueLabels: uniqueLabels}))
 
     const currentSelectedNodes = selectedNodesRef.current;
     // flow lines
@@ -522,7 +522,7 @@ srclabelGroups.attr('transform', d => {
   return `translate(${d.x - 15}, ${centerY}) scale(${labelScale}, ${labelScale / currentK})`;
 });
 
-  setConfig(updateConfig("zoomLevel", currentK, newConfig));
+  setConfig(prev => updateConfig("zoomLevel", currentK, prev));
 
     }
     let zoom = d3.zoom()
@@ -602,13 +602,13 @@ srclabelGroups.attr('transform', d => {
     svg.selectAll("*").remove()
     if (reactData.data.length == 0) {
             console.log("No data to display")
-            var newData = Object.assign({}, config.data, { noDataModal: true, noDataModalTable: true, noDataModalSummary: true})
-            var newResponse = Object.assign({}, config.response, { noData: true })
-            var newConfig = Object.assign({}, config, {data: newData})
-            setConfig(updateConfig("response", reactData, newConfig))
+            setConfig(prev => updateConfig("response", reactData, Object.assign({}, prev, {
+                data: Object.assign({}, prev.data, { noDataModal: true, noDataModalTable: true, noDataModalSummary: true})
+            })))
     } else {
-        var clearedData = Object.assign({}, config.data, { noDataModal: false, noDataModalTable: false, noDataModalSummary: false})
-        setConfig(updateConfig("response", reactData, Object.assign({}, config, {data: clearedData})))
+        setConfig(prev => updateConfig("response", reactData, Object.assign({}, prev, {
+            data: Object.assign({}, prev.data, { noDataModal: false, noDataModalTable: false, noDataModalSummary: false})
+        })))
         //console.log("Storing data")
         //console.log(config)
 
@@ -641,14 +641,11 @@ srclabelGroups.attr('transform', d => {
     }
   }
 
+  // Refetch only when request/render settings change. Do not depend on config.response
+  // (set by drawChart itself) or config.zoomLevel (set on every zoom tick).
   useEffect(()=>{
     drawChart()
-  }, [
-    useMemo(
-      () => (config.response),
-      [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip, config.filterConf.timeRanges, config.filterConf.datetimeRanges, config.filterConf.leftRenderThreshold, config.filterConf.rightRenderThreshold, config.zoomLevel]
-    )
-  ])
+  }, [config.canvas, config.canvas.viewBox, config.data.api, config.sortingConf.lhs, config.sortingConf.rhs, config.filterConf.omitSkip, config.filterConf.timeRanges, config.filterConf.datetimeRanges, config.filterConf.leftRenderThreshold, config.filterConf.rightRenderThreshold])
 
   useEffect(() => {
     // Update path styles whenever selectedNodes changes
