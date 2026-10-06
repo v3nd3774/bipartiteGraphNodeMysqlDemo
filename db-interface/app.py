@@ -1,6 +1,9 @@
 """
 Runs the API DB interface for returning data for bipartite graph visualizer.
 """
+import signal
+import time
+import atexit
 import os
 import sys
 import copy
@@ -14,8 +17,9 @@ from typing_extensions import TypedDict
 from flask import Response, request, Flask
 from typeguard import check_type
 from flask_caching import Cache
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, pool, event
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
@@ -115,8 +119,61 @@ url: str = ":".join([
     f"{config['MYSQL_PORT']}/{config['MYSQL_DB']}?charset=utf8"
 ])
 
-engine: Engine = create_engine(url)
-SQLAlchemyInstrumentor().instrument(engine=engine)
+global engine
+engine = None
+
+global instrumented
+instrumented: bool = False
+
+global listeners_attached
+listeners_attached: bool = False
+
+def setup_engine_listeners():
+    global listeners_attached
+    if listeners_attached or engine is None:
+        return
+
+    def checkout_listener(dbapi_connection, connection_record, connection_proxy):
+        try:
+            cursor = dbapi_connection.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+        except Exception:
+            raise
+
+    def engine_connect_listener(connection, branch):
+        print(f"New connection established: {connection}")
+
+    # Use event.listen() instead of decorator
+    event.listen(engine, "checkout", checkout_listener)
+    event.listen(engine, "engine_connect", engine_connect_listener)
+    listeners_attached = True
+
+def setup_instrumentation():
+    global engine, instrumented
+    if instrumented or engine is None:
+        return
+    try:
+        SQLAlchemyInstrumentor().instrument(engine=engine)
+        instrumented = True
+    except Exception as e:
+        print(f"Failed to instrument SQLAlchemy: {e}")
+
+def populate_engine() -> None:
+    global engine, instrumented, listeners_attached
+    engine = create_engine(
+        url,
+        pool_size=5,           # Maximum connections in pool
+        max_overflow=10,       # Extra connections if pool is full
+        pool_pre_ping=True,    # Check connection before using (CRITICAL!)
+        pool_recycle=3600,     # Recycle connections after 1 hour
+        pool_timeout=30,       # Timeout for getting connection
+        echo_pool=True         # Log pool activity (for debugging)
+    )
+    if not instrumented:
+        setup_instrumentation()
+    if not listeners_attached:
+        setup_engine_listeners()
 
 RawRowType: TypeAlias = Dict[str, str | int | datetime.datetime]
 
@@ -143,52 +200,123 @@ SummaryStatsType: TypedDict = TypedDict("SummaryStatsType", {
 
 @cache.memoize()
 def csv_to_array_of_dictionaries(file_path: str) -> List[RawRowType]:
-  """Reads a CSV file into an array of dictionaries.
+    """Reads a CSV file into an array of dictionaries.
 
-  Args:
-    file_path: The path to the CSV file.
+    Args:
+        file_path: The path to the CSV file.
 
-  Returns:
-    A list of dictionaries, where each dictionary represents a row
-    in the CSV file and keys are taken from the header row.
-    Returns an empty list if the file is not found or an error occurs.
-  """
-  df = None
-  try:
-    df = pd.read_csv(file_path)
-  except FileNotFoundError:
-    print(f"Error: File not found at {file_path}")
-    return []
-  except pd.errors.EmptyDataError:
-    print(f"Error: Empty CSV file at {file_path}")
-    return []
-
-  intermed = df.to_dict('records')
-  out = []
-  for item in intermed:
-    if any([pd.isna(v) for _, v in item.items()]):
-      print(f"Skipping item due to np.nan: {item}")
-      continue
+    Returns:
+        A list of dictionaries, where each dictionary represents a row
+        in the CSV file and keys are taken from the header row.
+        Returns an empty list if the file is not found or an error occurs.
+    """
+    print(f"\n=== DEBUG: Reading CSV file: {file_path} ===")
     try:
-      data = {**item,
-        'time': datetime.datetime.strptime(item['time'], "%Y-%m-%d %H:%M:%S")
-      }
-      out.append(data)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            print(f"Total lines in file: {len(lines)}")
+            print("First 5 lines of raw CSV:")
+            for i, line in enumerate(lines[:5]):
+                print(f"  Line {i+1}: {line.strip()}")
     except Exception as e:
-      print(f"An error occurred: {e}")
-      print(f"Item: {item}")
-      break
-  return out
+        print(f"Error reading raw file: {e}")
+    print("=== END DEBUG ===\n")
+    print(f"Columns expected: username, id, time, label, text, user_quality_score")
+    try:
+        # Force pandas to read all columns as strings first to avoid conversion issues
+        df = pd.read_csv(file_path, dtype=str, keep_default_na=False)
+    except FileNotFoundError:
+        print(f"Error: File not found at {file_path}")
+        return []
+    except pd.errors.EmptyDataError:
+        print(f"Error: Empty CSV file at {file_path}")
+        return []
+    except Exception as e:
+        print(f"Error reading CSV file {file_path}: {e}")
+        return []
+
+    # Check if dataframe is empty
+    if df.empty:
+        print(f"Warning: CSV file {file_path} is empty")
+        return []
+
+    # Convert to records
+    intermed = df.to_dict('records')
+    out = []
+
+    for item in intermed:
+        # Check for empty strings or None values
+        if any([v == '' or v is None for v in item.values()]):
+            print(f"Skipping item due to empty values: {item}")
+            continue
+
+        try:
+            # Convert time column to datetime
+            time_value = item.get('time', '')
+            if time_value:
+                # Parse the time string
+                parsed_time = datetime.datetime.strptime(time_value, "%Y-%m-%d %H:%M:%S")
+                # Convert numeric fields
+                data = {
+                    'username': item.get('username', ''),
+                    'id': int(item.get('id', 0)) if item.get('id', '').strip() else 0,
+                    'time': parsed_time,
+                    'label': item.get('label', ''),
+                    'text': item.get('text', ''),
+                    'user_quality_score': float(item.get('user_quality_score', 0)) if item.get('user_quality_score', '').strip() else 0.0
+                }
+                out.append(data)
+            else:
+                print(f"Skipping item due to missing time: {item}")
+        except Exception as e:
+            print(f"Error processing item: {e}")
+            print(f"Item: {item}")
+            # Don't break - continue with next item
+            continue
+
+    print(f"Successfully loaded {len(out)} rows from {file_path}")
+    return out
 
 @cache.memoize()
-def run_query(query: str) -> List[RawRowType]:
-    """ Runs a query and returns the results. """
-    with engine.connect() as connection:
-        result: List[RawRowType] = [
-            r._asdict()
-            for r in connection.execute(text(query))
-        ]
-    return result
+def run_query(query: str, max_retries: int = 2) -> List[RawRowType]:
+    """Runs a query with retry logic for connection issues."""
+    if debug_mode:
+        print("\n========== SQL QUERY START ==========")
+        print(query)
+        print("=====================================\n")
+    for attempt in range(max_retries):
+        try:
+            with engine.connect() as connection:
+                if debug_mode:
+                    db_name = connection.execute(text("SELECT DATABASE()")).scalar()
+                    print(f"Connected database: {db_name}")
+                    print(f"Attempt: {attempt + 1}")
+                result: List[RawRowType] = [
+                    r._asdict()
+                    for r in connection.execute(text(query))
+                ]
+                if debug_mode:
+                    print(f"Rows returned: {len(result)}")
+                    if result:
+                        print("First row:")
+                        print(json.dumps(result[0], default=str, indent=2))
+                        if len(result) > 1:
+                            print("Second row:")
+                            print(json.dumps(result[1], default=str, indent=2))
+                    else:
+                        print("WARNING: Query returned zero rows")
+                    print("========== SQL QUERY END ==========\n")
+
+            return result
+        except OperationalError as e:
+            if attempt < max_retries - 1:
+                print(f"Database error, retrying... (attempt {attempt + 1}/{max_retries})")
+                time.sleep(2 ** attempt)  # Exponential backoff
+                # Force pool disconnect
+                engine.dispose()
+            else:
+                raise e
+    return []
 
 def row_jsonifier_simple( # pylint: disable=too-many-arguments
     row: RawRowType,
@@ -647,8 +775,55 @@ def serve_environ_sample() -> Response:
         r.headers.add("Access-Control-Allow-Origin", "*")
     return r
 
+def cleanup():
+    """Clean up resources on shutdown."""
+    global engine
+    print("Cleaning up database connections...")
+    if engine is not None:
+        engine.dispose()
+    print("Cleanup complete.")
 
+def signal_handler(sig, frame):
+    global engine
+    print(f"Received signal {sig}, cleaning up...")
+    if engine is not None:
+        engine.dispose()
+    sys.exit(0)
 
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
+
+@app.before_request
+def before_request():
+    """Ensure database connection is alive before each request."""
+    global engine, instrumented, listeners_attached
+
+    if engine is None:
+        populate_engine()
+        return
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        print(f"Connection error, recreating engine: {e}")
+        if engine is not None:
+            engine.dispose()
+        # Recreate engine with fresh connections
+        engine = create_engine(
+            url,
+            pool_size=5,
+            max_overflow=10,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            pool_timeout=30,
+            echo_pool=True
+        )
+        # Reset flags so instrumentation and listeners are reattached
+        instrumented = False
+        listeners_attached = False
+        setup_instrumentation()
+        setup_engine_listeners()
 
 if __name__ == "__main__":
     KwargsType: TypedDict = TypedDict("KwargsType", {

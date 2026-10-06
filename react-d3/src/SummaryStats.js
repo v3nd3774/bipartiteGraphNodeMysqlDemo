@@ -15,9 +15,13 @@ export default function SummaryStats () {
 
     function drawSummary() {
 
-        let stringToInject = renderToString(<Loading/>)
+        const hasResponse = (! isEmpty(config.response)) && (! isEmpty(config.response.summary_stats))
+        // Base this on the data itself, not the modal flag, so an empty response is never drawn
+        let isLoading = !(hasResponse && config.response.summary_stats.edge_cnt > 0)
 
-        let isLoading = !((! isEmpty(config.response)) && (! isEmpty(config.response.summary_stats))) || config.data.noDataModalSummary
+        let stringToInject = hasResponse
+            ? renderToString(<p>No data to display.</p>)
+            : renderToString(<Loading/>)
 
         var data = !isLoading ? config.response.summary_stats : {
             "edge_cnt": 1,
@@ -186,7 +190,7 @@ export default function SummaryStats () {
                 .append("option")
             lhsOptions
                 .text(d => d.label)
-                .attr(d => d.label)
+                .attr("id", d => d.label)
             d3.select("div.lhs-node-unique-cnts-dropdown")
                 .selectAll("p")
                 .text(`${(100 * lhsSorted[0].cnt / data.edge_cnt).toFixed(2)}%`)
@@ -297,7 +301,7 @@ export default function SummaryStats () {
                 .append("option")
             rhsOptions
                 .text(d => d.label)
-                .attr(d => d.label)
+                .attr("id", d => d.label)
             d3.select("div.rhs-node-unique-cnts-dropdown")
                 .selectAll("p")
                 .text(`${(100 * rhsSorted[0].cnt / data.edge_cnt).toFixed(2)}%`)

@@ -5,12 +5,12 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 PROJECT_ROOT=$(dirname $SCRIPT_DIR)
 UI_CODE_DIR="$PROJECT_ROOT/react-d3/src"
-REPLACE_0=("localhost" "idir.uta.edu")
+REPLACE_0=("localhost" "idir.sockg.org")
 REPLACE_1=("5001" "443")
-REPLACE_2=("environ" "bipartiteGraphApi/environ")
-REPLACE_3=("testingsample" "bipartiteGraphApi/testingsample")
+REPLACE_2=("environ" "bigavaapi/environ")
+REPLACE_3=("testingsample" "bigavaapi/testingsample")
 REPLACE_4=("http" "https")
-REPLACE_5=("availabletestingdata" "bipartiteGraphApi/availabletestingdata")
+REPLACE_5=("availabletestingdata" "bigavaapi/availabletestingdata")
 MAIN_ARRAY=(
   REPLACE_0[@]
   REPLACE_1[@]

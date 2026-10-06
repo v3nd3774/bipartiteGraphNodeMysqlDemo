@@ -53,5 +53,13 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^5.17.0"
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(d3|d3-[a-z-]+|internmap|delaunator|robust-predicates|axios)/)"
+    ]
   }
 }
