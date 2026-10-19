@@ -60,7 +60,7 @@ export function subtractOneDay(date) {
         datetimeRanges: [
         ],
         leftRenderThreshold: 10,
-        rightRenderThreshold: 0,
+        rightRenderThreshold: 6,
   },
   zoomLevel: 1,
   colorScale: null,
